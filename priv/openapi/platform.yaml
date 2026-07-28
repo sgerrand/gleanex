@@ -1,0 +1,1950 @@
+openapi: 3.0.0
+info:
+  version: '2026-04-01'
+  title: Glean Platform API
+  x-source-commit-sha: 9b36aa40d235af4dfc387e9f4c62ed95a8dae326
+servers:
+  - url: https://{domain}-be.glean.com/api
+    variables:
+      domain:
+        default: domain
+        description: Backend subdomain for the API (e.g. mycompany or be4f5226 for new customers)
+security:
+  - ApiToken: []
+paths:
+  /agents/search:
+    post:
+      tags:
+        - Agents
+      summary: Search agents
+      description: |
+        Search agents available to the authenticated user by agent name.
+      operationId: platform-agents-search
+      x-visibility: Public
+      x-glean-sdk:
+        group: agents
+        method: search
+      x-glean-experimental:
+        id: 4abc1e17-8e06-490b-99a7-e8f97592405a
+        introduced: '2026-05-12'
+      x-codegen-request-body-name: payload
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentsSearchRequest'
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentsSearchResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '408':
+          $ref: '#/components/responses/RequestTimeout'
+        '413':
+          $ref: '#/components/responses/RequestTooLarge'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /agents/{agent_id}:
+    get:
+      tags:
+        - Agents
+      summary: Get agent
+      description: |
+        Retrieve details for an agent available to the authenticated user.
+      operationId: platform-agents-get
+      x-visibility: Public
+      x-glean-sdk:
+        group: agents
+        method: get
+      x-glean-experimental:
+        id: 009b3e94-694b-4deb-b80a-c67011173715
+        introduced: '2026-05-12'
+      parameters:
+        - in: path
+          name: agent_id
+          description: ID of the agent to retrieve.
+          required: true
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentGetResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '408':
+          $ref: '#/components/responses/RequestTimeout'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /agents/{agent_id}/schemas:
+    get:
+      tags:
+        - Agents
+      summary: Get agent schemas
+      description: |
+        Retrieve an agent's input and output JSON schemas.
+      operationId: platform-agents-get-schemas
+      x-visibility: Public
+      x-glean-sdk:
+        group: agents
+        method: getSchemas
+      x-glean-experimental:
+        id: b40b4dd3-3839-48e6-9e45-7e63e8148b49
+        introduced: '2026-05-12'
+      parameters:
+        - in: path
+          name: agent_id
+          description: ID of the agent whose schemas should be retrieved.
+          required: true
+          schema:
+            type: string
+            minLength: 1
+        - in: query
+          name: include_tools
+          description: Whether to include tool metadata in the response.
+          required: false
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentSchemasResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '408':
+          $ref: '#/components/responses/RequestTimeout'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /agents/{agent_id}/runs:
+    post:
+      tags:
+        - Agents
+      summary: Create agent run
+      description: |
+        Execute an agent run. Set `stream` to true to receive server-sent events; otherwise the response contains the final agent messages.
+      operationId: platform-agents-create-run
+      x-visibility: Public
+      x-glean-sdk:
+        group: agents
+        method: createRun
+      x-glean-experimental:
+        id: 26bba669-2e92-4e5d-9798-6a532fae4e9f
+        introduced: '2026-05-12'
+      x-codegen-request-body-name: payload
+      parameters:
+        - in: path
+          name: agent_id
+          description: ID of the agent to run.
+          required: true
+          schema:
+            type: string
+            minLength: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentRunCreateRequest'
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentRunWaitResponse'
+            text/event-stream:
+              schema:
+                type: string
+                description: Server-sent events emitted by the running agent.
+                example: |
+                  id: 1
+                  event: message
+                  data: {"messages":[{"role":"GLEAN_AI","content":[{"text":"Hello","type":"text"}]}]}
+
+                  id: 2
+                  event: message
+                  data: {"messages":[{"role":"GLEAN_AI","content":[{"text":", I can help with HR policy questions.","type":"text"}]}]}
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '408':
+          $ref: '#/components/responses/RequestTimeout'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '413':
+          $ref: '#/components/responses/RequestTooLarge'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /skills:
+    post:
+      tags:
+        - Skills
+      summary: Create skill
+      description: |
+        Create a skill from an uploaded SKILL.md, .zip, or .skill bundle. If the authenticated user already has a skill with the same name, the existing skill is superseded with a new version.
+      operationId: platform-skills-create
+      x-visibility: Public
+      x-glean-sdk:
+        group: skills
+        method: create
+      x-glean-experimental:
+        id: 3cd55572-0d5c-4898-9ecf-1b86c520d1c7
+        introduced: '2026-06-24'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SkillCreateRequest'
+        x-codegen-request-body-name: request
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SkillCreateResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '408':
+          $ref: '#/components/responses/RequestTimeout'
+        '413':
+          $ref: '#/components/responses/RequestTooLarge'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+    get:
+      tags:
+        - Skills
+      summary: List skills
+      description: |
+        List skills available to the authenticated user.
+      operationId: platform-skills-list
+      x-visibility: Public
+      x-glean-sdk:
+        group: skills
+        method: list
+      x-glean-experimental:
+        id: 3eb65937-03a3-472b-9a00-be713f302b5f
+        introduced: '2026-06-23'
+      parameters:
+        - in: query
+          name: page_size
+          description: Maximum number of skills to return.
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+        - in: query
+          name: cursor
+          description: Opaque pagination cursor from a previous response.
+          required: false
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SkillsListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '408':
+          $ref: '#/components/responses/RequestTimeout'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /skills/validation:
+    post:
+      tags:
+        - Skills
+      summary: Validate skill bundle
+      description: |
+        Validate a skill bundle without persisting it. Accepts a SKILL.md, .zip, or .skill upload and returns parsed metadata plus the normalized file layout.
+      operationId: platform-skills-validate
+      x-visibility: Public
+      x-glean-sdk:
+        group: skills
+        method: validate
+      x-glean-experimental:
+        id: 0b086fa6-30f8-4279-8d11-10ab0059c14a
+        introduced: '2026-06-24'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SkillValidationRequest'
+        x-codegen-request-body-name: request
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SkillValidationResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '408':
+          $ref: '#/components/responses/RequestTimeout'
+        '413':
+          $ref: '#/components/responses/RequestTooLarge'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /skills/{skill_id}:
+    patch:
+      tags:
+        - Skills
+      summary: Update skill
+      description: |
+        Update mutable metadata for a skill. V1 supports enabling or disabling a skill without changing its content.
+      operationId: platform-skills-update
+      x-visibility: Public
+      x-glean-sdk:
+        group: skills
+        method: update
+      x-glean-experimental:
+        id: 262e1f6b-6c2d-4d6d-943b-fc251d2fb38b
+        introduced: '2026-07-20'
+      parameters:
+        - name: skill_id
+          in: path
+          required: true
+          description: Glean skill ID.
+          schema:
+            type: string
+            minLength: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SkillUpdateRequest'
+        x-codegen-request-body-name: request
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SkillUpdateResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '408':
+          $ref: '#/components/responses/RequestTimeout'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '413':
+          $ref: '#/components/responses/RequestTooLarge'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+    get:
+      tags:
+        - Skills
+      summary: Retrieve skill
+      description: |
+        Retrieve metadata for a skill available to the authenticated user.
+      operationId: platform-skills-get
+      x-visibility: Public
+      x-glean-sdk:
+        group: skills
+        method: retrieve
+      x-glean-experimental:
+        id: 8f8d1c92-a484-4769-9903-200613dc8a72
+        introduced: '2026-06-23'
+      parameters:
+        - name: skill_id
+          in: path
+          required: true
+          description: Glean skill ID.
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SkillGetResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '408':
+          $ref: '#/components/responses/RequestTimeout'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /skills/{skill_id}/content:
+    get:
+      tags:
+        - Skills
+      summary: Download skill content
+      description: |
+        Download the latest installable bundle for a skill available to the authenticated user.
+      operationId: platform-skills-get-content
+      x-visibility: Public
+      x-glean-sdk:
+        group: skills
+        method: retrieveContent
+      x-glean-experimental:
+        id: fd6908d8-f230-4cd5-bf45-f71e69266b1d
+        introduced: '2026-06-24'
+      parameters:
+        - name: skill_id
+          in: path
+          required: true
+          description: Glean skill ID.
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        '200':
+          description: Successful response.
+          headers:
+            Content-Disposition:
+              description: Attachment filename for the skill bundle.
+              schema:
+                type: string
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '408':
+          $ref: '#/components/responses/RequestTimeout'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /skills/{skill_id}/versions:
+    post:
+      tags:
+        - Skills
+      summary: Create skill version
+      description: |
+        Create a new immutable version for an existing caller-managed skill from an uploaded SKILL.md, .zip, or .skill bundle.
+      operationId: platform-skills-create-version
+      x-visibility: Public
+      x-glean-sdk:
+        group: skills
+        method: createVersion
+      x-glean-experimental:
+        id: 0d5e48e2-7a41-4d54-b3aa-5026f0dd65df
+        introduced: '2026-06-24'
+      parameters:
+        - name: skill_id
+          in: path
+          required: true
+          description: Glean skill ID.
+          schema:
+            type: string
+            minLength: 1
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SkillVersionCreateRequest'
+        x-codegen-request-body-name: request
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SkillVersionCreateResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '408':
+          $ref: '#/components/responses/RequestTimeout'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '413':
+          $ref: '#/components/responses/RequestTooLarge'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+    get:
+      tags:
+        - Skills
+      summary: List skill versions
+      description: |
+        List versions for a skill available to the authenticated user.
+      operationId: platform-skills-list-versions
+      x-visibility: Public
+      x-glean-sdk:
+        group: skills
+        method: listVersions
+      x-glean-experimental:
+        id: 9efbb8a3-d546-4304-a653-09bb427e3681
+        introduced: '2026-06-24'
+      parameters:
+        - name: skill_id
+          in: path
+          required: true
+          description: Glean skill ID.
+          schema:
+            type: string
+            minLength: 1
+        - in: query
+          name: page_size
+          description: Maximum number of versions to return.
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+        - in: query
+          name: cursor
+          description: Opaque pagination cursor from a previous response.
+          required: false
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SkillVersionsListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '408':
+          $ref: '#/components/responses/RequestTimeout'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /skills/{skill_id}/versions/{version}:
+    get:
+      tags:
+        - Skills
+      summary: Retrieve skill version
+      description: |
+        Retrieve metadata for a skill version available to the authenticated user.
+      operationId: platform-skills-get-version
+      x-visibility: Public
+      x-glean-sdk:
+        group: skills
+        method: retrieveVersion
+      x-glean-experimental:
+        id: d70986b1-ad80-48dd-8e52-f294e7251dda
+        introduced: '2026-06-24'
+      parameters:
+        - name: skill_id
+          in: path
+          required: true
+          description: Glean skill ID.
+          schema:
+            type: string
+            minLength: 1
+        - name: version
+          in: path
+          required: true
+          description: Major version number.
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SkillVersionGetResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '408':
+          $ref: '#/components/responses/RequestTimeout'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /skills/{skill_id}/versions/{version}/content:
+    get:
+      tags:
+        - Skills
+      summary: Download skill version content
+      description: |
+        Download the installable bundle for a skill version available to the authenticated user.
+      operationId: platform-skills-get-version-content
+      x-visibility: Public
+      x-glean-sdk:
+        group: skills
+        method: retrieveVersionContent
+      x-glean-experimental:
+        id: 70c85692-7042-403a-a3a5-5b315576432a
+        introduced: '2026-06-24'
+      parameters:
+        - name: skill_id
+          in: path
+          required: true
+          description: Glean skill ID.
+          schema:
+            type: string
+            minLength: 1
+        - name: version
+          in: path
+          required: true
+          description: Major version number.
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Successful response.
+          headers:
+            Content-Disposition:
+              description: Attachment filename for the skill bundle.
+              schema:
+                type: string
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '408':
+          $ref: '#/components/responses/RequestTimeout'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /search:
+    post:
+      tags:
+        - Search
+      summary: Search
+      description: |
+        Search your organization's connected content and return ranked document results with cursor pagination. Use `GET /api/search/filters` to discover datasource identifiers and common filter fields. Built-in filter names are validated; other field names are accepted as custom filters and behavior depends on your Glean configuration and connected sources.
+        Errors: HTTP 422 `unprocessable_query` returns no `results` or `next_cursor`. See `warnings` on the response for non-blocking issues such as partially available results. Not every query issue produces a warning or error.
+      operationId: platform-search
+      x-visibility: Public
+      x-glean-sdk:
+        group: search
+        method: query
+      x-glean-experimental:
+        id: 5ab612fc-ed50-4419-bec3-e5fe83934653
+        introduced: '2026-04-08'
+      x-codegen-request-body-name: payload
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SearchRequest'
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '408':
+          $ref: '#/components/responses/RequestTimeout'
+        '413':
+          $ref: '#/components/responses/RequestTooLarge'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /search/filters:
+    get:
+      tags:
+        - Search
+      summary: List search filters
+      description: |
+        List datasources and common built-in filter fields visible to the authenticated user. This is a best-effort catalog, not an exhaustive list of every filter search accepts.
+        Without `query`, returns field metadata only and does not run a search. With a nonblank `query`, provide exactly one `datasources` value to request suggested filter values for that query; no documents are returned and this endpoint does not include warning objects. See `FilterFieldInfo.values` for limitations on suggested values. Rate-limited requests return HTTP 429 with `Retry-After`; temporary backend unavailability returns HTTP 503.
+      operationId: platform-search-filters
+      x-visibility: Public
+      x-glean-sdk:
+        group: search
+        method: listFilters
+      x-glean-experimental:
+        id: 0b585621-13fb-4544-bf20-5e1c99452735
+        introduced: '2026-05-12'
+      parameters:
+        - in: query
+          name: datasources
+          description: |
+            Restrict metadata to one or more datasource identifiers as returned by this endpoint (for example, `jira`). With a nonblank `query`, exactly one datasource is required. Unknown or inaccessible identifiers return `invalid_datasource`.
+          required: false
+          schema:
+            type: array
+            minItems: 1
+            items:
+              type: string
+              minLength: 1
+        - in: query
+          name: query
+          description: |
+            Optional search query that requests suggested filter values for the selected datasource. Must be nonblank when present. Triggers a search for facet values only; does not return documents.
+          required: false
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        '200':
+          description: Successful response.
+          headers:
+            Cache-Control:
+              description: |
+                Present as `no-store` for query-backed discovery responses. Catalog-only responses omit this endpoint-specific override.
+              schema:
+                type: string
+                example: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchFiltersResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '408':
+          $ref: '#/components/responses/RequestTimeout'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+components:
+  securitySchemes:
+    ApiToken:
+      type: http
+      scheme: bearer
+      description: |
+        Glean API token. Obtain via Admin Console -> Platform -> API Tokens, or via OAuth 2.0 client credentials flow.
+  schemas:
+    AgentsSearchRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          description: Case-insensitive substring to match against agent names. If omitted or empty, no name filter is applied.
+          example: HR Policy Agent
+    AgentCapabilities:
+      type: object
+      additionalProperties: true
+      properties:
+        ap.io.messages:
+          type: boolean
+          description: Whether the agent supports messages as input.
+        ap.io.streaming:
+          type: boolean
+          description: Whether the agent supports streaming output.
+    Agent:
+      type: object
+      required:
+        - agent_id
+        - name
+        - capabilities
+      properties:
+        agent_id:
+          type: string
+          description: ID of the agent.
+          example: mho4lwzylcozgoc2
+        name:
+          type: string
+          description: Name of the agent.
+          example: HR Policy Agent
+        description:
+          type: string
+          description: Description of the agent.
+        metadata:
+          type: object
+          description: Agent metadata.
+          additionalProperties: true
+        capabilities:
+          $ref: '#/components/schemas/AgentCapabilities'
+    AgentsSearchResponse:
+      type: object
+      required:
+        - agents
+        - request_id
+      properties:
+        agents:
+          type: array
+          description: Agents matching the search request.
+          items:
+            $ref: '#/components/schemas/Agent'
+        request_id:
+          type: string
+          description: Platform-generated request ID for support correlation.
+    ProblemDetailCode:
+      type: string
+      description: Stable machine-readable error code.
+      enum:
+        - invalid_request
+        - missing_required_field
+        - invalid_parameter
+        - invalid_cursor
+        - expired_cursor
+        - invalid_filter
+        - invalid_datasource
+        - authentication_required
+        - token_expired
+        - insufficient_permissions
+        - resource_not_found
+        - method_not_allowed
+        - request_timeout
+        - request_too_large
+        - conflict
+        - gone
+        - unprocessable_query
+        - rate_limit_exceeded
+        - internal_error
+        - service_unavailable
+      x-glean-problem-detail-codes:
+        invalid_request:
+          status: 400
+          title: Invalid Request
+        missing_required_field:
+          status: 400
+          title: Missing Required Field
+        invalid_parameter:
+          status: 400
+          title: Invalid Parameter
+        invalid_cursor:
+          status: 400
+          title: Invalid Pagination Cursor
+        expired_cursor:
+          status: 400
+          title: Expired Pagination Cursor
+        invalid_filter:
+          status: 400
+          title: Invalid Filter
+        invalid_datasource:
+          status: 400
+          title: Invalid Datasource
+        authentication_required:
+          status: 401
+          title: Authentication Required
+        token_expired:
+          status: 401
+          title: Token Expired
+        insufficient_permissions:
+          status: 403
+          title: Insufficient Permissions
+        resource_not_found:
+          status: 404
+          title: Resource Not Found
+        method_not_allowed:
+          status: 405
+          title: Method Not Allowed
+        request_timeout:
+          status: 408
+          title: Request Timeout
+        request_too_large:
+          status: 413
+          title: Request Too Large
+        conflict:
+          status: 409
+          title: Conflict
+        gone:
+          status: 410
+          title: Gone
+        unprocessable_query:
+          status: 422
+          title: Unprocessable Query
+        rate_limit_exceeded:
+          status: 429
+          title: Rate Limit Exceeded
+        internal_error:
+          status: 500
+          title: Internal Error
+        service_unavailable:
+          status: 503
+          title: Service Unavailable
+      example: invalid_cursor
+    ProblemDetailError:
+      type: object
+      required:
+        - pointer
+        - detail
+      description: Field-level validation problem for a single offending field.
+      properties:
+        pointer:
+          type: string
+          description: RFC 6901 JSON Pointer to the offending field.
+          example: /messages/0/role
+        detail:
+          type: string
+          description: Human-readable explanation for this field.
+          example: 'Must be one of: USER, GLEAN_AI.'
+        code:
+          $ref: '#/components/schemas/ProblemDetailCode'
+    ProblemDetail:
+      type: object
+      required:
+        - type
+        - title
+        - status
+        - detail
+        - code
+        - request_id
+      description: |
+        Error response following RFC 9457, extended with `code` and `documentation_url` for machine-readable classification and self-service remediation.
+      properties:
+        type:
+          type: string
+          format: uri
+          description: URI identifying the error type.
+          example: https://developers.glean.com/errors/invalid-cursor
+        title:
+          type: string
+          description: Short, human-readable summary of the error.
+          example: Invalid Pagination Cursor
+        status:
+          type: integer
+          description: HTTP status code mirrored from the response.
+          example: 400
+        detail:
+          type: string
+          description: Human-readable explanation specific to this occurrence.
+          example: |
+            The provided cursor has expired. Start a new search to get a fresh cursor.
+        code:
+          $ref: '#/components/schemas/ProblemDetailCode'
+        documentation_url:
+          type: string
+          format: uri
+          description: Direct URL to documentation for this error code.
+          example: https://developers.glean.com/errors/invalid-cursor
+        request_id:
+          type: string
+          description: Platform-generated request ID for support correlation.
+          example: req_7f8a9b0c1d2e
+        errors:
+          type: array
+          description: Field-level validation problems, one entry per offending field.
+          items:
+            $ref: '#/components/schemas/ProblemDetailError'
+    AgentGetResponse:
+      type: object
+      required:
+        - agent
+        - request_id
+      properties:
+        agent:
+          $ref: '#/components/schemas/Agent'
+        request_id:
+          type: string
+          description: Platform-generated request ID for support correlation.
+    ActionSummary:
+      type: object
+      required:
+        - tool_id
+        - display_name
+      properties:
+        tool_id:
+          type: string
+          description: Unique identifier of the action.
+        display_name:
+          type: string
+          description: Display name of the action.
+        type:
+          type: string
+          description: Tool type.
+        auth_type:
+          type: string
+          description: Authentication type required by the action.
+        write_action_type:
+          type: string
+          description: Write-action execution type.
+        is_setup_finished:
+          type: boolean
+          description: Whether this action has been fully configured.
+        data_source:
+          type: string
+          description: Kind of knowledge the action accesses or modifies.
+    AgentSchemasResponse:
+      type: object
+      required:
+        - agent_id
+        - input_schema
+        - output_schema
+        - request_id
+      properties:
+        agent_id:
+          type: string
+          description: ID of the agent.
+        name:
+          type: string
+          description: Name of the agent.
+        input_schema:
+          type: object
+          description: Agent input schema in JSON Schema format.
+          additionalProperties: true
+        output_schema:
+          type: object
+          description: Agent output schema in JSON Schema format.
+          additionalProperties: true
+        tools:
+          type: array
+          description: Tools that the agent can invoke, when requested.
+          items:
+            $ref: '#/components/schemas/ActionSummary'
+        request_id:
+          type: string
+          description: Platform-generated request ID for support correlation.
+    MessageRole:
+      type: string
+      description: Role of the message author.
+      example: USER
+      enum:
+        - USER
+        - GLEAN_AI
+    ContentType:
+      type: string
+      enum:
+        - text
+    MessageTextBlock:
+      type: object
+      required:
+        - text
+        - type
+      properties:
+        text:
+          type: string
+          description: Text content.
+        type:
+          $ref: '#/components/schemas/ContentType'
+    Message:
+      type: object
+      required:
+        - role
+        - content
+      properties:
+        role:
+          $ref: '#/components/schemas/MessageRole'
+        content:
+          type: array
+          minItems: 1
+          description: Content blocks in the message.
+          items:
+            $ref: '#/components/schemas/MessageTextBlock'
+    AgentRunCreateRequest:
+      type: object
+      additionalProperties: false
+      description: |
+        Request to run an agent. A request MUST supply either `messages` (a non-empty conversation) or `input` (for input-form triggered agents).
+      properties:
+        input:
+          type: object
+          description: Input fields for an input-form triggered agent.
+          additionalProperties: true
+        messages:
+          type: array
+          minItems: 1
+          description: |
+            Messages to pass to the agent. When provided, the array MUST contain at least one message and each message MUST specify a valid `role` and non-empty `content`.
+          items:
+            $ref: '#/components/schemas/Message'
+        metadata:
+          type: object
+          description: Metadata to pass to the agent.
+          additionalProperties: true
+        stream:
+          type: boolean
+          description: Whether to stream the run response as server-sent events.
+          default: false
+    AgentRunCreate:
+      type: object
+      required:
+        - agent_id
+      properties:
+        agent_id:
+          type: string
+          description: ID of the agent being run.
+        input:
+          type: object
+          description: Input fields for an input-form triggered agent.
+          additionalProperties: true
+        messages:
+          type: array
+          description: Messages passed to the agent.
+          items:
+            $ref: '#/components/schemas/Message'
+        metadata:
+          type: object
+          description: Metadata passed to the agent.
+          additionalProperties: true
+    AgentExecutionStatus:
+      type: string
+      description: Status of the agent run.
+      enum:
+        - error
+        - success
+    AgentRun:
+      allOf:
+        - $ref: '#/components/schemas/AgentRunCreate'
+        - type: object
+          required:
+            - status
+          properties:
+            status:
+              $ref: '#/components/schemas/AgentExecutionStatus'
+    AgentRunWaitResponse:
+      type: object
+      required:
+        - request_id
+      properties:
+        run:
+          $ref: '#/components/schemas/AgentRun'
+        messages:
+          type: array
+          description: Messages returned by the completed run.
+          items:
+            $ref: '#/components/schemas/Message'
+        request_id:
+          type: string
+          description: Platform-generated request ID for support correlation.
+    SkillStatus:
+      type: string
+      enum:
+        - DRAFT
+        - ENABLED
+        - DISABLED
+      description: Current skill status.
+    SkillOrigin:
+      type: string
+      enum:
+        - CUSTOM
+      description: Source category for the skill.
+    SkillSyncStatus:
+      type: string
+      enum:
+        - UP_TO_DATE
+        - UPDATE_AVAILABLE
+        - SYNC_FAILED
+      description: Current external-source sync status.
+    SkillSourceProvenance:
+      type: object
+      properties:
+        source_url:
+          type: string
+          description: URL of the external source the skill was imported from.
+        commit_sha:
+          type: string
+          description: Source commit SHA for the imported skill.
+        imported_at:
+          type: string
+          format: date-time
+          description: Time the skill was imported.
+        last_synced_at:
+          type: string
+          format: date-time
+          description: Time the skill was last synced from its source.
+        sync_status:
+          $ref: '#/components/schemas/SkillSyncStatus'
+        sync_error:
+          type: string
+          description: Human-readable sync failure reason, present only when sync_status is SYNC_FAILED.
+    PersonReference:
+      type: object
+      description: A lightweight reference to a person, used where a payload merely points at someone.
+      required:
+        - name
+      properties:
+        id:
+          type: string
+          description: Opaque Glean person ID.
+        name:
+          type: string
+          description: Display name.
+    Skill:
+      type: object
+      required:
+        - id
+        - display_name
+        - description
+        - latest_version
+        - latest_minor_version
+        - status
+        - origin
+        - owner
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          description: Glean skill ID.
+        display_name:
+          type: string
+          description: Human-readable skill name.
+        description:
+          type: string
+          description: Human-readable skill description.
+        latest_version:
+          type: integer
+          description: Latest major version number for the skill.
+        latest_minor_version:
+          type: integer
+          description: Latest minor version number for the skill.
+        status:
+          $ref: '#/components/schemas/SkillStatus'
+        origin:
+          $ref: '#/components/schemas/SkillOrigin'
+        source_provenance:
+          $ref: '#/components/schemas/SkillSourceProvenance'
+        owner:
+          $ref: '#/components/schemas/PersonReference'
+        created_at:
+          type: string
+          format: date-time
+          description: Time the skill was created.
+        updated_at:
+          type: string
+          format: date-time
+          description: Time the skill was last updated.
+    SkillsListResponse:
+      type: object
+      required:
+        - skills
+        - has_more
+        - next_cursor
+        - request_id
+      properties:
+        skills:
+          type: array
+          description: Skills available to the user.
+          items:
+            $ref: '#/components/schemas/Skill'
+        has_more:
+          type: boolean
+          description: Whether additional results are available.
+        next_cursor:
+          type: string
+          nullable: true
+          description: Cursor for the next page, or null when no more results are available.
+        request_id:
+          type: string
+          description: Platform-generated request ID for support correlation.
+    SkillCreateRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - file
+      properties:
+        file:
+          type: string
+          format: binary
+          description: SKILL.md, .zip, or .skill bundle to create.
+    SkillCreateResponse:
+      type: object
+      required:
+        - skill
+        - request_id
+      properties:
+        skill:
+          $ref: '#/components/schemas/Skill'
+        request_id:
+          type: string
+          description: Platform-generated request ID for support correlation.
+    SkillValidationRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - file
+      properties:
+        file:
+          type: string
+          format: binary
+          description: SKILL.md, .zip, or .skill bundle to validate.
+    SkillValidationMetadata:
+      type: object
+      required:
+        - display_name
+        - description
+      properties:
+        display_name:
+          type: string
+          description: Skill name parsed from SKILL.md frontmatter.
+        description:
+          type: string
+          description: Skill description parsed from SKILL.md frontmatter.
+    SkillValidationFile:
+      type: object
+      required:
+        - path
+        - size_bytes
+        - is_manifest
+      properties:
+        path:
+          type: string
+          description: Normalized relative path in the skill bundle.
+        size_bytes:
+          type: integer
+          description: File size in bytes.
+        is_manifest:
+          type: boolean
+          description: Whether this file is the skill manifest.
+    PlatformWarning:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - message
+      description: Non-blocking warning attached to a successful Platform response.
+      properties:
+        code:
+          type: string
+          minLength: 1
+          description: |
+            Open snake_case warning code. Clients must tolerate unknown values; the set of codes is not a closed enum.
+          example: results_incomplete
+        message:
+          type: string
+          minLength: 1
+          description: Human-readable warning message.
+    SkillValidationResponse:
+      type: object
+      required:
+        - metadata
+        - files
+        - warnings
+        - request_id
+      properties:
+        metadata:
+          $ref: '#/components/schemas/SkillValidationMetadata'
+        files:
+          type: array
+          description: Normalized files in the bundle after stripping an optional single root folder.
+          items:
+            $ref: '#/components/schemas/SkillValidationFile'
+        warnings:
+          type: array
+          description: Non-blocking validation warnings.
+          items:
+            $ref: '#/components/schemas/PlatformWarning'
+        request_id:
+          type: string
+          description: Platform-generated request ID for support correlation.
+    SkillGetResponse:
+      type: object
+      required:
+        - skill
+        - request_id
+      properties:
+        skill:
+          $ref: '#/components/schemas/Skill'
+        request_id:
+          type: string
+          description: Platform-generated request ID for support correlation.
+    SkillUpdateStatus:
+      type: string
+      enum:
+        - ENABLED
+        - DISABLED
+      description: New status for the skill.
+    SkillUpdateRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - status
+      properties:
+        status:
+          $ref: '#/components/schemas/SkillUpdateStatus'
+    SkillUpdateResponse:
+      type: object
+      required:
+        - skill
+        - request_id
+      properties:
+        skill:
+          $ref: '#/components/schemas/Skill'
+        request_id:
+          type: string
+          description: Platform-generated request ID for support correlation.
+    SkillVersion:
+      type: object
+      required:
+        - skill_id
+        - version
+        - minor_version
+        - is_latest
+        - created_by
+        - created_at
+        - updated_at
+      properties:
+        skill_id:
+          type: string
+          description: Glean skill ID.
+        version:
+          type: integer
+          description: Major version number.
+        minor_version:
+          type: integer
+          description: Minor version number.
+        is_latest:
+          type: boolean
+          description: Whether this is the latest version of the skill.
+        created_by:
+          $ref: '#/components/schemas/PersonReference'
+        created_at:
+          type: string
+          format: date-time
+          description: Time this version was created.
+        updated_at:
+          type: string
+          format: date-time
+          description: Time this version was last updated.
+        source_provenance:
+          $ref: '#/components/schemas/SkillSourceProvenance'
+    SkillVersionsListResponse:
+      type: object
+      required:
+        - versions
+        - has_more
+        - next_cursor
+        - request_id
+      properties:
+        versions:
+          type: array
+          description: Versions available for the skill.
+          items:
+            $ref: '#/components/schemas/SkillVersion'
+        has_more:
+          type: boolean
+          description: Whether additional results are available.
+        next_cursor:
+          type: string
+          nullable: true
+          description: Cursor for the next page, or null when no more results are available.
+        request_id:
+          type: string
+          description: Platform-generated request ID for support correlation.
+    SkillVersionCreateRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - file
+      properties:
+        file:
+          type: string
+          format: binary
+          description: SKILL.md, .zip, or .skill bundle to store as a new version.
+    SkillVersionCreateResponse:
+      type: object
+      required:
+        - version
+        - request_id
+      properties:
+        version:
+          $ref: '#/components/schemas/SkillVersion'
+        request_id:
+          type: string
+          description: Platform-generated request ID for support correlation.
+    SkillVersionGetResponse:
+      type: object
+      required:
+        - version
+        - request_id
+      properties:
+        version:
+          $ref: '#/components/schemas/SkillVersion'
+        request_id:
+          type: string
+          description: Platform-generated request ID for support correlation.
+    FilterOperator:
+      type: string
+      description: Supported filter operator.
+      enum:
+        - EQUALS
+        - NOT_EQUALS
+        - GT
+        - GTE
+        - LT
+        - LTE
+    Filter:
+      type: object
+      additionalProperties: false
+      required:
+        - field
+        - values
+      description: |
+        A single filter criterion. For `EQUALS`, multiple values within a filter are OR'd; for `NOT_EQUALS`, listed values are excluded. Separate filters are AND'd with each other and with inline operators in `query`. Repeated same-field `EQUALS` filters are rejected.
+      properties:
+        field:
+          type: string
+          minLength: 1
+          description: |
+            Filter field name. Built-in names (case-sensitive, lowercase only): `type`, `owner`, `from`, `author`, `channel`, `status`, `assignee`, `reporter`, `component`, `mentions`, and `collection`. Built-ins accept only `EQUALS` and `NOT_EQUALS`. Any other nonblank name is accepted as a custom filter without spelling, existence, or type checks; behavior depends on your connected sources.
+          example: type
+        values:
+          type: array
+          minItems: 1
+          items:
+            type: string
+            minLength: 1
+          description: |
+            One or more values to match. Prefer values returned by filter discovery unchanged. For people (`USER`) fields, values may be email addresses or display names.
+          example:
+            - spreadsheet
+            - presentation
+        operator:
+          allOf:
+            - $ref: '#/components/schemas/FilterOperator'
+          description: |
+            Comparison operator. Defaults to `EQUALS`. Built-in fields support only `EQUALS` and `NOT_EQUALS`. Range operators (`GT`, `GTE`, `LT`, `LTE`) require exactly one value; express ranges with multiple filters on the same field. Custom fields may support different operators depending on the data source.
+    TimeRange:
+      type: object
+      additionalProperties: false
+      description: Filter results to those last updated within this range.
+      properties:
+        start:
+          type: string
+          format: date-time
+          description: Inclusive lower bound in ISO 8601 format.
+        end:
+          type: string
+          format: date-time
+          description: Exclusive upper bound in ISO 8601 format.
+    SearchRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - query
+      example:
+        query: quarterly planning 2026
+        datasources:
+          - confluence
+          - google_drive
+        filters:
+          - field: type
+            values:
+              - spreadsheet
+              - presentation
+      properties:
+        query:
+          type: string
+          minLength: 1
+          description: |
+            The search query string. Supports inline operators such as `from:jane type:document app:confluence`. Inline operators are AND'd with structured `filters`.
+        page_size:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 10
+          description: Number of results to return per page.
+        cursor:
+          type: string
+          nullable: true
+          description: |
+            Opaque pagination token from a previous response's `next_cursor` field. Omit on the first request.
+        datasources:
+          type: array
+          minItems: 1
+          items:
+            type: string
+            minLength: 1
+          description: |
+            Restrict results to specific datasource identifiers returned by `GET /api/search/filters`. Scopes by datasource type and may include results from multiple instances of that type.
+        filters:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/Filter'
+          description: |
+            Structured filters applied to search results. Multiple values within a filter with `EQUALS` are OR'd; separate filters are AND'd. Conflicting constraints on the same field (for example, `type:document` in `query` and `type:spreadsheet` in a filter) return an empty result set. See `Filter.field` for built-in field names and operators. Other nonblank field names are accepted as custom filters without validation; behavior depends on your connected sources.
+        time_range:
+          $ref: '#/components/schemas/TimeRange'
+    Result:
+      type: object
+      additionalProperties: false
+      required:
+        - url
+        - title
+        - datasource
+      properties:
+        url:
+          type: string
+          format: uri
+          minLength: 1
+          description: Canonical URL of the result.
+          example: https://company.atlassian.net/wiki/spaces/ENG/pages/12345
+        title:
+          type: string
+          minLength: 1
+          description: Result title.
+          example: Q2 2026 Platform Roadmap
+        snippets:
+          type: array
+          items:
+            type: string
+            minLength: 1
+          description: Query-relevant plain-text excerpts from the result body.
+          example:
+            - The platform team will focus on API stability and...
+        datasource:
+          type: string
+          minLength: 1
+          description: The datasource this result originates from.
+          example: confluence
+        document_type:
+          type: string
+          nullable: true
+          minLength: 1
+          description: The document type within the datasource.
+          example: page
+        creator:
+          $ref: '#/components/schemas/PersonReference'
+        owner:
+          $ref: '#/components/schemas/PersonReference'
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: When the result was last modified.
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: When the result was created.
+    SearchResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - results
+        - has_more
+        - next_cursor
+        - request_id
+        - warnings
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Result'
+          description: |
+            Ordered list of ranked document results. People cards, Q&A blocks, and other UI-only result types are not included.
+        has_more:
+          type: boolean
+          description: Indicates whether additional pages of results are available.
+        next_cursor:
+          type: string
+          nullable: true
+          description: Opaque token to pass as `cursor` in the next request.
+        request_id:
+          type: string
+          minLength: 1
+          description: Platform-generated request ID for support correlation.
+        warnings:
+          type: array
+          description: |
+            Non-blocking warnings for this response. Required; use `[]` when there are none. Clients must tolerate unknown warning codes. `results_incomplete` means some results may be unavailable for the requested datasource scope while `results`, `has_more`, and `next_cursor` remain present. Warning messages are generic and do not include query text or internal identifiers.
+          items:
+            $ref: '#/components/schemas/PlatformWarning'
+    FilterFieldInfo:
+      type: object
+      additionalProperties: false
+      required:
+        - field
+        - type
+        - operators
+      properties:
+        field:
+          type: string
+          minLength: 1
+          description: Field name usable in the `filters` array for `POST /api/search`.
+          example: status
+        type:
+          type: string
+          minLength: 1
+          description: |
+            Open field-type string. Current values are `STRING` for text and keyword fields and `USER` for people fields (`owner`, `from`, `author`, `assignee`, `reporter`, `mentions`). Clients must tolerate unknown values.
+          example: STRING
+        operators:
+          type: array
+          minItems: 1
+          description: |
+            Comparison operators supported for this field. Built-in fields expose `EQUALS` and `NOT_EQUALS`.
+          items:
+            $ref: '#/components/schemas/FilterOperator'
+        values:
+          type: array
+          description: |
+            Suggested filter values observed for the supplied `query`. Omitted in catalog-only responses. Present as an array, including `[]`, when `query` is provided. Values are a bounded, non-exhaustive sample in search-provider order and may include duplicates; blank values are omitted. No additional endpoint-specific truncation is applied. Grouping in the search UI is not preserved; each value applies to the field broadly. An empty array does not mean no valid value exists. Availability varies by data source; federated and MCP integrations may return page-derived values or none at all. Reusing a suggested value in `POST /api/search` does not guarantee matching results or identical filter behavior. For `USER` fields, values may be email addresses or display names.
+          items:
+            type: string
+            minLength: 1
+    DatasourceFilterInfo:
+      type: object
+      additionalProperties: false
+      required:
+        - datasource
+        - filters
+      properties:
+        datasource:
+          type: string
+          minLength: 1
+          description: |
+            Datasource identifier usable in `POST /api/search` `datasources`.
+          example: jira
+        filters:
+          type: array
+          description: |
+            Common built-in filter fields for this datasource. May be empty. A built-in omitted here can still be valid in `POST /api/search`; see `Filter.field` for the full built-in name list.
+          items:
+            $ref: '#/components/schemas/FilterFieldInfo'
+    SearchFiltersResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - datasources
+        - request_id
+      properties:
+        datasources:
+          type: array
+          description: |
+            Datasources visible to the authenticated user. Each `datasource` is an identifier you can pass to `POST /api/search` `datasources`. An empty array means no visible datasources.
+          items:
+            $ref: '#/components/schemas/DatasourceFilterInfo'
+        request_id:
+          type: string
+          minLength: 1
+          description: Platform-generated request ID for support correlation.
+  responses:
+    BadRequest:
+      description: Invalid request (malformed JSON, invalid parameter values, unknown fields).
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetail'
+    Unauthorized:
+      description: Missing or invalid authentication token.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetail'
+    Forbidden:
+      description: Token valid but lacks permission for the requested operation.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetail'
+    NotFound:
+      description: Resource not found.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetail'
+    RequestTimeout:
+      description: Backend did not respond within the timeout window.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetail'
+    RequestTooLarge:
+      description: Request body exceeds the maximum allowed size.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetail'
+    TooManyRequests:
+      description: Rate limit exceeded. Includes Retry-After header.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetail'
+    InternalServerError:
+      description: Unexpected server-side failure.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetail'
+    ServiceUnavailable:
+      description: Backend temporarily unavailable.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetail'
+    Conflict:
+      description: Request conflicts with current state of the resource.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetail'
+    UnprocessableEntity:
+      description: Syntactically valid but semantically incorrect request.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetail'
+x-tagGroups:
+  - name: AI
+    tags:
+      - Agents
+      - Skills
+  - name: Data Retrieval
+    tags:
+      - Search
+  - name: Automation
+    tags:
+      - Triggers

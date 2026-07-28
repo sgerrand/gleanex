@@ -1,0 +1,1394 @@
+openapi: 3.0.0
+info:
+  version: 0.9.0
+  title: Glean Rest Admin API
+  x-source-commit-sha: 9b36aa40d235af4dfc387e9f4c62ed95a8dae326
+  description: |
+    # Introduction
+    These are all the APIs exposed to the users through an auth token to utilize certain admin
+    operations. These offer limited exposure to the admin APIs through rest endpoints.
+  x-logo:
+    url: https://app.glean.com/images/glean-text2.svg
+servers:
+  - url: https://{domain}-be.glean.com/rest/api/v1
+    variables:
+      domain:
+        default: domain
+        description: Backend subdomain for the API (e.g. mycompany or be4f5226 for new customers)
+security:
+  - actAsBearerToken: []
+  - cookieAuth: []
+paths:
+  /governance/data/policies/{id}:
+    get:
+      description: Fetches the specified policy version, or the latest if no version is provided.
+      summary: Gets specified policy
+      operationId: getpolicy
+      x-visibility: Public
+      tags:
+        - Governance
+      parameters:
+        - name: id
+          in: path
+          description: The id of the policy to fetch.
+          required: true
+          schema:
+            type: string
+        - name: version
+          in: query
+          description: The version of the policy to fetch. Each time a policy is updated, the older version is still stored. If this is left empty, the latest policy is fetched.
+          required: false
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetDlpReportResponse'
+        '403':
+          description: Permissions error
+        '500':
+          description: Internal error
+    post:
+      description: Updates an existing policy.
+      summary: Updates an existing policy
+      operationId: updatepolicy
+      tags:
+        - Governance
+      parameters:
+        - name: id
+          in: path
+          description: The id of the policy to fetch.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json; charset=UTF-8:
+            schema:
+              $ref: '#/components/schemas/UpdateDlpReportRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json; charset=UTF-8:
+              schema:
+                $ref: '#/components/schemas/UpdateDlpReportResponse'
+        '403':
+          description: Permissions error
+        '500':
+          description: Internal error
+  /governance/data/policies:
+    get:
+      description: Lists policies with filtering.
+      summary: Lists policies
+      operationId: listpolicies
+      x-visibility: Public
+      tags:
+        - Governance
+      parameters:
+        - name: autoHide
+          in: query
+          description: Filter to return reports with a given value of auto-hide.
+          required: false
+          schema:
+            type: boolean
+        - name: frequency
+          in: query
+          description: Filter to return reports with a given frequency.
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListDlpReportsResponse'
+        '403':
+          description: Permissions error
+        '500':
+          description: Internal error
+    post:
+      description: Creates a new policy with specified specifications and returns its id.
+      summary: Creates new policy
+      operationId: createpolicy
+      x-visibility: Public
+      tags:
+        - Governance
+      requestBody:
+        content:
+          application/json; charset=UTF-8:
+            schema:
+              $ref: '#/components/schemas/CreateDlpReportRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json; charset=UTF-8:
+              schema:
+                $ref: '#/components/schemas/CreateDlpReportResponse'
+        '403':
+          description: Permissions error
+        '500':
+          description: Internal error
+  /governance/data/policies/{id}/download:
+    get:
+      description: Downloads CSV violations report for a specific policy id. This does not support continuous policies.
+      summary: Downloads violations CSV for policy
+      operationId: downloadpolicycsv
+      x-visibility: Public
+      tags:
+        - Governance
+      parameters:
+        - name: id
+          in: path
+          description: The id of the policy to download violations for.
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Downloads csv of batch policy violations.
+          content:
+            text/csv; charset=UTF-8:
+              schema:
+                description: CSV of all the violations found for this policy.
+                type: string
+        '400':
+          description: Bad request error (e.g., continuous policies are not supported).
+        '403':
+          description: Permissions error
+        '500':
+          description: Internal error
+  /governance/data/reports:
+    post:
+      description: Creates a new one-time report and executes its batch job.
+      summary: Creates new one-time report
+      operationId: createreport
+      x-visibility: Public
+      tags:
+        - Governance
+      requestBody:
+        content:
+          application/json; charset=UTF-8:
+            schema:
+              $ref: '#/components/schemas/UpdateDlpConfigRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json; charset=UTF-8:
+              schema:
+                $ref: '#/components/schemas/UpdateDlpConfigResponse'
+        '403':
+          description: Permissions error
+        '500':
+          description: Internal error
+  /governance/data/reports/{id}/download:
+    get:
+      description: Downloads CSV violations report for a specific report id.
+      summary: Downloads violations CSV for report
+      operationId: downloadreportcsv
+      x-visibility: Public
+      tags:
+        - Governance
+      parameters:
+        - name: id
+          in: path
+          description: The id of the report to download violations for.
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Downloads csv of one-time report violations.
+          content:
+            text/csv; charset=UTF-8:
+              schema:
+                description: CSV of all the violations found for this report.
+                type: string
+        '403':
+          description: Permissions error
+        '500':
+          description: Internal error
+  /governance/data/reports/{id}/status:
+    get:
+      description: Fetches the status of the run corresponding to the report-id.
+      summary: Fetches report run status
+      operationId: getreportstatus
+      x-visibility: Public
+      tags:
+        - Governance
+      parameters:
+        - name: id
+          in: path
+          description: The id of the report to get run status for.
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Fetches status of report run.
+          content:
+            application/json; charset=UTF-8:
+              schema:
+                $ref: '#/components/schemas/ReportStatusResponse'
+        '403':
+          description: Permissions error
+        '500':
+          description: Internal error
+  /governance/documents/visibilityoverrides:
+    get:
+      description: Fetches the visibility override status of the documents passed.
+      summary: Fetches documents visibility
+      operationId: getdocvisibility
+      x-visibility: Public
+      tags:
+        - Governance
+      parameters:
+        - name: docIds
+          in: query
+          description: List of doc-ids which will have their hide status fetched.
+          schema:
+            type: array
+            items:
+              type: string
+      responses:
+        '200':
+          description: The visibility status of documents
+          content:
+            application/json; charset=UTF-8:
+              schema:
+                $ref: '#/components/schemas/GetDocumentVisibilityOverridesResponse'
+        '403':
+          description: Permissions error
+        '500':
+          description: Internal error
+    post:
+      description: Sets the visibility-override state of the documents specified, effectively hiding or un-hiding documents.
+      summary: Hide or unhide docs
+      operationId: setdocvisibility
+      x-visibility: Public
+      tags:
+        - Governance
+      requestBody:
+        content:
+          application/json; charset=UTF-8:
+            schema:
+              $ref: '#/components/schemas/UpdateDocumentVisibilityOverridesRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json; charset=UTF-8:
+              schema:
+                $ref: '#/components/schemas/UpdateDocumentVisibilityOverridesResponse'
+        '403':
+          description: Permissions error
+        '500':
+          description: Internal error
+  /governance/data/findings/exports:
+    post:
+      description: Creates a new DLP findings export job.
+      summary: Creates findings export
+      operationId: createfindingsexport
+      x-visibility: Public
+      tags:
+        - Governance
+      requestBody:
+        content:
+          application/json; charset=UTF-8:
+            schema:
+              $ref: '#/components/schemas/DlpExportFindingsRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExportInfo'
+        '403':
+          description: Permissions error
+        '500':
+          description: Internal error
+    get:
+      description: Lists all DLP findings exports.
+      summary: Lists findings exports
+      operationId: listfindingsexports
+      x-visibility: Public
+      tags:
+        - Governance
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListDlpFindingsExportsResponse'
+        '403':
+          description: Permissions error
+        '500':
+          description: Internal error
+  /governance/data/findings/exports/{id}:
+    get:
+      description: Downloads a DLP findings export as a CSV file.
+      summary: Downloads findings export
+      operationId: downloadfindingsexport
+      x-visibility: Public
+      tags:
+        - Governance
+      parameters:
+        - name: id
+          in: path
+          description: The ID of the export to download.
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Downloads CSV of exported findings.
+          content:
+            text/csv; charset=UTF-8:
+              schema:
+                description: CSV of all the exported findings.
+                type: string
+        '403':
+          description: Permissions error
+        '500':
+          description: Internal error
+    delete:
+      description: Deletes a DLP findings export.
+      summary: Deletes findings export
+      operationId: deletefindingsexport
+      x-visibility: Public
+      tags:
+        - Governance
+      parameters:
+        - name: id
+          in: path
+          description: The ID of the export to delete.
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: OK
+        '403':
+          description: Permissions error
+        '500':
+          description: Internal error
+  /configure/datasources/{datasourceId}/instances/{instanceId}:
+    get:
+      description: |
+        Gets the greenlisted configuration values for a datasource instance. Returns only configuration keys that are exposed via the public API greenlist.
+      summary: Get datasource instance configuration
+      operationId: getDatasourceInstanceConfiguration
+      x-visibility: Preview
+      tags:
+        - Datasources
+      parameters:
+        - $ref: '#/components/parameters/datasourceId'
+        - $ref: '#/components/parameters/instanceId'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatasourceConfigurationResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Not authorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Datasource instance not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    patch:
+      description: |
+        Updates the greenlisted configuration values for a datasource instance. Only configuration keys that are exposed via the public API greenlist may be set. Returns the full greenlisted configuration after the update is applied.
+      summary: Update datasource instance configuration
+      operationId: updateDatasourceInstanceConfiguration
+      x-visibility: Preview
+      tags:
+        - Datasources
+      parameters:
+        - $ref: '#/components/parameters/datasourceId'
+        - $ref: '#/components/parameters/instanceId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateDatasourceConfigurationRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatasourceConfigurationResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Not authorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Datasource instance not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /datasource/{datasourceInstanceId}/credentialstatus:
+    get:
+      description: |
+        Returns the current credential status for a datasource instance. Access is limited to callers with the ADMIN scope; the handler enforces this check.
+      summary: Get datasource instance credential status
+      operationId: getDatasourceCredentialStatus
+      x-visibility: Preview
+      tags:
+        - Datasources
+      parameters:
+        - $ref: '#/components/parameters/datasourceInstanceId'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatasourceCredentialStatusResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Not authorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Datasource instance not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /datasource/{datasourceInstanceId}/credentials:
+    post:
+      description: |
+        Rotates the credentials that a datasource instance uses to connect to its upstream system. Replaces the active credential material with the supplied values and returns the credential status after rotation. Access is limited to callers with the ADMIN scope; the handler enforces this check.
+        Only keys recognized as credential material for the datasource type may be set in `credentials.values` (e.g. `clientSecret`, `apiToken`, `privateKey`, depending on the configured auth method). Unrecognized keys, or keys that correspond to non-credential configuration, cause a 400; other instance configuration must be updated via PATCH /configure/datasources/{datasourceId}/instances/{instanceId}.
+      summary: Rotate datasource instance credentials
+      operationId: rotateDatasourceCredentials
+      x-visibility: Preview
+      tags:
+        - Datasources
+      parameters:
+        - $ref: '#/components/parameters/datasourceInstanceId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RotateDatasourceCredentialsRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatasourceCredentialStatusResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Not authorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Datasource instance not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  schemas:
+    SensitiveInfoType:
+      properties:
+        likelihoodThreshold:
+          deprecated: true
+          type: string
+          enum:
+            - LIKELY
+            - VERY_LIKELY
+            - POSSIBLE
+            - UNLIKELY
+            - VERY_UNLIKELY
+          x-glean-deprecated:
+            - id: d45039ec-d6f6-47ba-93b7-ab2307b07f84
+              introduced: '2026-02-05'
+              kind: property
+              message: Field is deprecated
+              removal: '2026-10-15'
+        infoType:
+          description: Text representation of an info-type to scan for.
+          type: string
+    TimeRange:
+      properties:
+        startTime:
+          type: string
+          description: start time of the time range, applicable for the CUSTOM type.
+          format: date-time
+        endTime:
+          type: string
+          description: end time of the time range, applicable for the CUSTOM type.
+          format: date-time
+        lastNDaysValue:
+          type: integer
+          description: The number of days to look back from the current time, applicable for the LAST_N_DAYS type.
+          format: int64
+    InputOptions:
+      description: Controls which data-sources and what time-range to include in scans.
+      properties:
+        urlGreenlist:
+          deprecated: true
+          type: array
+          description: list of url regex matching documents excluded from report
+          items:
+            type: string
+          x-glean-deprecated:
+            id: e022aaa5-56e6-4b57-bca3-b11943da76a0
+            introduced: '2026-02-05'
+            message: Field is deprecated
+            removal: '2026-10-15'
+        datasourcesType:
+          type: string
+          description: The types of datasource for which to run the report/policy.
+          enum:
+            - ALL
+            - CUSTOM
+        datasources:
+          deprecated: true
+          type: array
+          description: List of datasources to consider for report. DEPRECATED - use datasourceInstances instead.
+          items:
+            type: string
+          x-glean-deprecated:
+            id: 97e35970-e0ed-4248-be13-2af8c22e7894
+            introduced: '2026-02-05'
+            message: Use datasourceInstances instead
+            removal: '2026-10-15'
+        datasourceInstances:
+          type: array
+          description: List of datasource instances to consider for report/policy.
+          items:
+            type: string
+        timePeriodType:
+          type: string
+          description: Type of time period for which to run the report/policy. PAST_DAY is deprecated.
+          enum:
+            - ALL_TIME
+            - PAST_YEAR
+            - PAST_DAY
+            - CUSTOM
+            - LAST_N_DAYS
+        customTimeRange:
+          $ref: '#/components/schemas/TimeRange'
+        subsetDocIdsToScan:
+          type: array
+          description: Subset of document IDs to scan. If empty, all documents matching other scope criteria will be scanned.
+          items:
+            type: string
+    SharingOptions:
+      description: Controls how "shared" a document must be to get picked for scans.
+      properties:
+        enabled:
+          deprecated: true
+          type: boolean
+          x-glean-deprecated:
+            id: e9260be6-209b-4ce2-a4b3-f7f22879dd86
+            introduced: '2026-02-05'
+            message: Field is deprecated
+            removal: '2026-10-15'
+        threshold:
+          description: The minimum number of users the document is shared with.
+          type: integer
+        thresholdEnabled:
+          description: Documents will be filtered based on how many people have access to it.
+          type: boolean
+        anyoneWithLinkEnabled:
+          deprecated: true
+          type: boolean
+          x-glean-deprecated:
+            id: 30646ced-e0db-43ef-8412-64a67c5d0f53
+            introduced: '2026-02-05'
+            message: Field is deprecated
+            removal: '2026-10-15'
+        anyoneInternalEnabled:
+          description: Only users within the organization can access the document.
+          type: boolean
+        anonymousAccessEnabled:
+          description: Anyone on the internet can access the document.
+          type: boolean
+        userAccessEnabled:
+          description: Enable user access check
+          type: boolean
+        userIds:
+          type: array
+          description: Any one of the specified users can access the document.
+          items:
+            type: string
+    ExternalSharingOptions:
+      deprecated: true
+      x-glean-deprecated:
+        id: 7c9e4a1d-3f8b-4e2c-9a5d-6b0f1c8e2d4a
+        introduced: '2026-02-05'
+        message: Use broadSharingOptions instead
+        removal: '2026-10-15'
+      allOf:
+        - description: DEPRECATED - use `broadSharingOptions` instead.
+        - $ref: '#/components/schemas/SharingOptions'
+        - type: object
+          properties:
+            domainAccessEnabled:
+              type: boolean
+    HotwordProximity:
+      properties:
+        windowBefore:
+          type: integer
+        windowAfter:
+          type: integer
+    Hotword:
+      properties:
+        regex:
+          type: string
+        proximity:
+          $ref: '#/components/schemas/HotwordProximity'
+    SensitiveExpression:
+      properties:
+        expression:
+          description: Sensitive word, phrase, or regular expression.
+          type: string
+        hotwords:
+          description: Zero to three proximate regular expressions necessary to consider an expression as sensitive content.
+          type: array
+          items:
+            $ref: '#/components/schemas/Hotword'
+    CustomSensitiveRuleType:
+      type: string
+      description: Type of the custom sensitive rule.
+      enum:
+        - REGEX
+        - TERM
+        - INFO_TYPE
+    CustomSensitiveRule:
+      properties:
+        id:
+          description: Identifier for the custom sensitive expression.
+          type: string
+        value:
+          type: string
+          description: The value of the custom sensitive rule. For REGEX type, this is the regex pattern; for TERM type, it is the term to match; and for INFO_TYPE type, it refers to predefined categories of sensitive content. See https://cloud.google.com/dlp/docs/infotypes-reference for available options.
+        type:
+          $ref: '#/components/schemas/CustomSensitiveRuleType'
+        likelihoodThreshold:
+          description: Likelihood threshold for BUILT_IN infotypes (e.g., LIKELY, VERY_LIKELY). Only applicable for BUILT_IN type.
+          type: string
+          enum:
+            - LIKELY
+            - VERY_LIKELY
+            - POSSIBLE
+            - UNLIKELY
+            - VERY_UNLIKELY
+    CustomSensitiveExpression:
+      properties:
+        id:
+          description: Identifier for the custom sensitive expression.
+          type: string
+        keyword:
+          description: The keyword to match against.
+          $ref: '#/components/schemas/CustomSensitiveRule'
+        evaluationExpression:
+          description: The expression to evaluate the keyword match.
+          type: string
+    SensitiveContentOptions:
+      description: Options for defining sensitive content within scanned documents.
+      properties:
+        sensitiveInfoTypes:
+          deprecated: true
+          description: DEPRECATED - use 'customSensitiveExpressions' instead.
+          type: array
+          items:
+            $ref: '#/components/schemas/SensitiveInfoType'
+          x-glean-deprecated:
+            id: 3497cb1c-f7aa-42d8-81b8-309c3adeed84
+            introduced: '2026-02-05'
+            message: Use customSensitiveExpressions instead
+            removal: '2026-10-15'
+        sensitiveTerms:
+          deprecated: true
+          description: DEPRECATED - use 'customSensitiveExpressions' instead.
+          type: array
+          items:
+            $ref: '#/components/schemas/SensitiveExpression'
+          x-glean-deprecated:
+            id: b0713b37-472e-4c29-80ba-6f5d6f2b449c
+            introduced: '2026-02-05'
+            message: Use customSensitiveExpressions instead
+            removal: '2026-10-15'
+        sensitiveRegexes:
+          deprecated: true
+          description: DEPRECATED - use 'customSensitiveExpressions' instead.
+          type: array
+          items:
+            $ref: '#/components/schemas/SensitiveExpression'
+          x-glean-deprecated:
+            id: a26e1920-36b6-4c0f-981f-57b09a9ebce3
+            introduced: '2026-02-05'
+            message: Use customSensitiveExpressions instead
+            removal: '2026-10-15'
+        customSensitiveExpressions:
+          description: list of custom sensitive expressions to consider as sensitive content
+          type: array
+          items:
+            $ref: '#/components/schemas/CustomSensitiveExpression'
+    DlpPersonMetadata:
+      properties:
+        firstName:
+          type: string
+          description: The first name of the person
+        email:
+          type: string
+          description: The user's primary email address
+    DlpPerson:
+      description: Details about the person who created this report/policy.
+      required:
+        - name
+        - obfuscatedId
+      properties:
+        name:
+          type: string
+          description: The display name.
+        obfuscatedId:
+          type: string
+          description: An opaque identifier that can be used to request metadata for a Person.
+        metadata:
+          $ref: '#/components/schemas/DlpPersonMetadata'
+    AllowlistOptions:
+      description: Terms and regexes that are allow-listed during the scans. If any finding picked up by a rule exactly matches a term, or matches a regex, in the allow-list, it will not be counted as a violation.
+      properties:
+        terms:
+          type: array
+          description: list of words and phrases to consider as whitelisted content
+          items:
+            type: string
+        regexes:
+          type: array
+          description: list of regular expressions whose matches are considered whitelisted content
+          items:
+            type: string
+    DlpConfig:
+      description: Detailed configuration of what documents and sensitive content will be scanned.
+      properties:
+        version:
+          description: Synonymous with report/policy id.
+          type: integer
+          format: int64
+        sensitiveInfoTypes:
+          deprecated: true
+          description: DEPRECATED - use `sensitiveContentOptions` instead.
+          type: array
+          items:
+            $ref: '#/components/schemas/SensitiveInfoType'
+          x-glean-deprecated:
+            id: 60d6d182-e9d0-448d-af75-137f68bbdcbf
+            introduced: '2026-02-05'
+            message: Use sensitiveContentOptions instead
+            removal: '2026-10-15'
+        inputOptions:
+          description: Options for documents to include or exclude in a report
+          $ref: '#/components/schemas/InputOptions'
+        externalSharingOptions:
+          deprecated: true
+          description: DEPRECATED - use `broadSharingOptions` instead.
+          $ref: '#/components/schemas/ExternalSharingOptions'
+          x-glean-deprecated:
+            id: 6484ec17-a133-4176-b2ce-28e25b0e9065
+            introduced: '2026-02-05'
+            message: Use broadSharingOptions instead
+            removal: '2026-10-15'
+        broadSharingOptions:
+          description: Options for defining documents to scan for sensitive content.
+          $ref: '#/components/schemas/SharingOptions'
+        sensitiveContentOptions:
+          description: Options for defining sensitive content within scanned documents.
+          $ref: '#/components/schemas/SensitiveContentOptions'
+        reportName:
+          type: string
+        frequency:
+          description: Interval between scans.
+          type: string
+        createdBy:
+          description: Person who created this report/policy.
+          $ref: '#/components/schemas/DlpPerson'
+        createdAt:
+          description: Timestamp at which this configuration was created.
+          type: string
+          format: iso-date-time
+        redactQuote:
+          description: redact quote in findings of the report
+          type: boolean
+        autoHideDocs:
+          description: auto hide documents with findings in the report
+          type: boolean
+        allowlistOptions:
+          description: Options for defining whitelisting content within scanned documents
+          $ref: '#/components/schemas/AllowlistOptions'
+    DlpFrequency:
+      type: string
+      description: Interval between scans. DAILY is deprecated.
+      x-include-enum-class-prefix: true
+      enum:
+        - ONCE
+        - DAILY
+        - WEEKLY
+        - CONTINUOUS
+        - NONE
+    DlpReportStatus:
+      type: string
+      description: The status of the policy/report. Only ACTIVE status will be picked for scans.
+      x-include-enum-class-prefix: true
+      enum:
+        - ACTIVE
+        - INACTIVE
+        - CANCELLED
+        - NONE
+    DlpReport:
+      description: Full policy information that will be used for scans.
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        config:
+          description: All details of the policy that is needed for a scan.
+          $ref: '#/components/schemas/DlpConfig'
+        frequency:
+          description: The interval between scans.
+          $ref: '#/components/schemas/DlpFrequency'
+        status:
+          description: The status of the policy.
+          $ref: '#/components/schemas/DlpReportStatus'
+        createdBy:
+          description: Person who created this report.
+          $ref: '#/components/schemas/DlpPerson'
+        createdAt:
+          description: Timestamp at which the policy was created.
+          type: string
+          format: iso-date-time
+        lastUpdatedAt:
+          description: Timestamp at which the policy was last updated.
+          type: string
+          format: iso-date-time
+        autoHideDocs:
+          description: Auto hide documents with findings in the policy.
+          type: boolean
+        lastScanStatus:
+          type: string
+          enum:
+            - PENDING
+            - SUCCESS
+            - FAILURE
+            - CANCELLED
+            - CANCELLING
+            - ACTIVE
+        lastScanStartTime:
+          description: The timestamp at which the report's last run/scan began.
+          type: string
+          format: iso-date-time
+        updatedBy:
+          description: Person who last updated this report.
+          $ref: '#/components/schemas/DlpPerson'
+    GetDlpReportResponse:
+      properties:
+        report:
+          $ref: '#/components/schemas/DlpReport'
+    UpdateDlpReportRequest:
+      properties:
+        config:
+          description: The new configuration the policy will follow if provided.
+          $ref: '#/components/schemas/DlpConfig'
+        frequency:
+          description: The new frequency the policy will follow if provided.
+          $ref: '#/components/schemas/DlpFrequency'
+        status:
+          description: The new status the policy will be updated to if provided.
+          $ref: '#/components/schemas/DlpReportStatus'
+        autoHideDocs:
+          description: The new autoHideDoc boolean the policy will be updated to if provided.
+          type: boolean
+        reportName:
+          description: The new name of the policy if provided.
+          type: string
+    DlpSimpleResult:
+      type: string
+      enum:
+        - SUCCESS
+        - FAILURE
+    UpdateDlpReportResponse:
+      properties:
+        result:
+          $ref: '#/components/schemas/DlpSimpleResult'
+    ListDlpReportsResponse:
+      properties:
+        reports:
+          type: array
+          items:
+            $ref: '#/components/schemas/DlpReport'
+    CreateDlpReportRequest:
+      properties:
+        name:
+          description: Name of the policy being created.
+          type: string
+        config:
+          description: Details on the configuration used in the scans.
+          $ref: '#/components/schemas/DlpConfig'
+        frequency:
+          description: Interval between scans.
+          $ref: '#/components/schemas/DlpFrequency'
+        autoHideDocs:
+          description: Controls whether the policy should hide documents with violations.
+          type: boolean
+    CreateDlpReportResponse:
+      properties:
+        report:
+          $ref: '#/components/schemas/DlpReport'
+    UpdateDlpConfigRequest:
+      properties:
+        config:
+          $ref: '#/components/schemas/DlpConfig'
+        frequency:
+          description: Only "ONCE" is supported for reports.
+          type: string
+    UpdateDlpConfigResponse:
+      properties:
+        result:
+          $ref: '#/components/schemas/DlpSimpleResult'
+        reportId:
+          description: The id of the report that was just created and run.
+          type: string
+    ReportStatusResponse:
+      properties:
+        status:
+          type: string
+          enum:
+            - PENDING
+            - SUCCESS
+            - FAILURE
+            - CANCELLED
+            - CANCELLING
+            - ACTIVE
+        startTime:
+          description: The timestamp at which the report's run/scan began.
+          type: string
+          format: iso-date-time
+    DocumentVisibilityOverride:
+      properties:
+        docId:
+          type: string
+        override:
+          description: The visibility-override state of the document.
+          type: string
+          enum:
+            - NONE
+            - HIDE_FROM_ALL
+            - HIDE_FROM_GROUPS
+            - HIDE_FROM_ALL_EXCEPT_OWNER
+    GetDocumentVisibilityOverridesResponse:
+      properties:
+        visibilityOverrides:
+          type: array
+          items:
+            $ref: '#/components/schemas/DocumentVisibilityOverride'
+    UpdateDocumentVisibilityOverridesRequest:
+      properties:
+        visibilityOverrides:
+          type: array
+          items:
+            $ref: '#/components/schemas/DocumentVisibilityOverride'
+    DocumentVisibilityUpdateResult:
+      allOf:
+        - $ref: '#/components/schemas/DocumentVisibilityOverride'
+        - type: object
+          properties:
+            success:
+              description: Whether this document was successfully set to its desired visibility state.
+              type: boolean
+    UpdateDocumentVisibilityOverridesResponse:
+      properties:
+        results:
+          description: The documents and whether their visibility was successfully updated.
+          type: array
+          items:
+            $ref: '#/components/schemas/DocumentVisibilityUpdateResult'
+    DlpSeverity:
+      type: string
+      description: Severity levels for DLP findings and analyses. FALSE_POSITIVE ranks below LOW and marks analyses that concluded every flagged entity is a detector false positive.
+      x-include-enum-class-prefix: true
+      enum:
+        - UNSPECIFIED
+        - LOW
+        - MEDIUM
+        - HIGH
+        - FALSE_POSITIVE
+    DlpIssueStatus:
+      type: string
+      description: Status of a DLP issue.
+      x-include-enum-class-prefix: true
+      enum:
+        - OPEN
+        - CLOSED
+        - IN_PROGRESS
+        - RESOLVED
+    TimeRangeFilter:
+      properties:
+        timePeriodType:
+          type: string
+          description: The type of time period for which to filter findings.
+          enum:
+            - PAST_DAY
+            - PAST_WEEK
+            - PAST_MONTH
+            - PAST_YEAR
+            - CUSTOM
+        customTimeRange:
+          $ref: '#/components/schemas/TimeRange'
+    DlpFindingFilter:
+      properties:
+        infoType:
+          type: string
+        regexId:
+          type: string
+        reportId:
+          type: string
+        datasource:
+          type: string
+        visibility:
+          type: string
+        documentIds:
+          type: array
+          items:
+            type: string
+        severity:
+          $ref: '#/components/schemas/DlpSeverity'
+        documentSeverity:
+          type: array
+          items:
+            $ref: '#/components/schemas/DlpSeverity'
+        statuses:
+          type: array
+          items:
+            $ref: '#/components/schemas/DlpIssueStatus'
+        timeRange:
+          $ref: '#/components/schemas/TimeRangeFilter'
+        archived:
+          type: boolean
+    DlpIssueFilter:
+      description: Filter for DLP issues. Includes document-level filters and issue-specific filters.
+      properties:
+        searchText:
+          type: string
+          description: Text to search for in issue fields.
+        statuses:
+          type: array
+          items:
+            $ref: '#/components/schemas/DlpIssueStatus'
+          description: Filter by one or more issue statuses.
+        assigneeId:
+          type: string
+          deprecated: true
+          description: Filter by a single assignee user ID. Deprecated; use assigneeIds.
+        assigneeIds:
+          type: array
+          items:
+            type: string
+          description: Filter by one or more assignee user IDs. Use the sentinel value "UNASSIGNED" to match issues with no assignee.
+        infoType:
+          type: string
+          deprecated: true
+          description: Filter by a single built-in info type. Deprecated; use infoTypes.
+        infoTypes:
+          type: array
+          items:
+            type: string
+          description: Filter by one or more built-in info types.
+        regexId:
+          type: string
+          deprecated: true
+          description: Filter by a single regex rule ID. Deprecated; use regexIds.
+        regexIds:
+          type: array
+          items:
+            type: string
+          description: Filter by one or more regex rule IDs.
+        reportIds:
+          type: array
+          items:
+            type: string
+          description: Filter by one or more report/policy IDs.
+        docId:
+          type: string
+        datasource:
+          type: string
+          deprecated: true
+          description: Filter by a single datasource. Deprecated; use datasources.
+        datasources:
+          type: array
+          items:
+            type: string
+          description: Filter by one or more datasources.
+        visibility:
+          type: string
+        severities:
+          type: array
+          items:
+            $ref: '#/components/schemas/DlpSeverity'
+          description: Filter by one or more severity levels.
+        timeRange:
+          $ref: '#/components/schemas/TimeRangeFilter'
+    ExportInfo:
+      properties:
+        createdBy:
+          description: person who triggered this export
+          $ref: '#/components/schemas/DlpPerson'
+        startTime:
+          description: Timestamp at which this export started.
+          type: string
+          format: iso-date-time
+        endTime:
+          description: Timestamp at which this export completed.
+          type: string
+          format: iso-date-time
+        exportId:
+          type: string
+          description: The ID of the export
+        fileName:
+          type: string
+          description: The name of the file to export the findings to
+        exportType:
+          type: string
+          description: The type of export to perform
+          enum:
+            - FINDINGS
+            - DOCUMENTS
+            - ISSUES
+        filter:
+          $ref: '#/components/schemas/DlpFindingFilter'
+          description: The filters used to export the findings. Set for FINDINGS and DOCUMENTS exports.
+        issueFilter:
+          $ref: '#/components/schemas/DlpIssueFilter'
+          description: The filters used for ISSUES exports.
+        status:
+          type: string
+          description: The status of the export
+          enum:
+            - PENDING
+            - COMPLETED
+            - FAILED
+        exportSize:
+          type: integer
+          format: int64
+          description: The size of the exported file in bytes
+    ListDlpFindingsExportsResponse:
+      properties:
+        exports:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExportInfo'
+    DlpExportFindingsRequest:
+      properties:
+        exportType:
+          type: string
+          description: The type of export to perform
+          enum:
+            - FINDINGS
+            - DOCUMENTS
+            - ISSUES
+        filter:
+          $ref: '#/components/schemas/DlpFindingFilter'
+        issueFilter:
+          $ref: '#/components/schemas/DlpIssueFilter'
+          description: Filter for ISSUE-level exports. Used when exportType is ISSUES.
+        fileName:
+          type: string
+          description: The name of the file to export the findings to
+        fieldScope:
+          type: string
+          description: Controls which fields to include in the export
+          enum:
+            - ALL
+            - EXCLUDE_SENSITIVE
+            - CUSTOM
+        fieldsToExclude:
+          type: array
+          items:
+            type: string
+          description: List of field names to exclude from the export
+    ConfigurationValue:
+      description: A single configuration value, either a scalar or a list
+      type: object
+      properties:
+        value:
+          description: The configuration value as a string. Only one of value or valueList should be populated.
+          type: string
+        valueList:
+          description: The configuration value as a list of strings. Only one of value or valueList should be populated.
+          type: array
+          items:
+            type: string
+    ConfigurationValues:
+      description: A map from configuration key names to their values
+      type: object
+      additionalProperties:
+        $ref: '#/components/schemas/ConfigurationValue'
+    DatasourceInstanceConfiguration:
+      description: Configuration for a datasource instance
+      type: object
+      required:
+        - values
+      properties:
+        values:
+          $ref: '#/components/schemas/ConfigurationValues'
+    DatasourceConfigurationResponse:
+      description: |
+        The greenlisted configuration values for a datasource instance. Only keys that are exposed via the public API greenlist are included.
+      type: object
+      required:
+        - configuration
+      properties:
+        configuration:
+          $ref: '#/components/schemas/DatasourceInstanceConfiguration'
+    ErrorResponse:
+      description: Error response returned for failed requests
+      type: object
+      properties:
+        message:
+          description: Client-facing error message describing what went wrong
+          type: string
+    UpdateDatasourceConfigurationRequest:
+      description: |
+        Request to update greenlisted configuration values for a datasource instance. Only keys that are exposed via the public API greenlist may be set.
+      type: object
+      required:
+        - configuration
+      properties:
+        configuration:
+          $ref: '#/components/schemas/DatasourceInstanceConfiguration'
+    DatasourceCredentialStatus:
+      description: |
+        Lifecycle state of the credentials installed for a datasource instance. Mirrors the internal admin Status enum so the handler can surface the same health signals already tracked today. EXPIRING_SOON is represented as VALID_WITH_WARNINGS (with detail in `message`); EXPIRED is surfaced as INVALID plus a non-null `expiresAt` in the past.
+      type: string
+      enum:
+        - VALID
+        - VALID_WITH_WARNINGS
+        - VALIDATING
+        - INVALID
+        - MISSING
+    DatasourceCredentialStatusResponse:
+      description: Status of the credentials currently installed for a datasource instance.
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          $ref: '#/components/schemas/DatasourceCredentialStatus'
+        lastRotatedAt:
+          description: When the credentials were last rotated. Omitted when not known.
+          type: string
+          format: date-time
+        expiresAt:
+          description: |
+            When the active credentials expire. Omitted when not known or not applicable to this credential type.
+          type: string
+          format: date-time
+        message:
+          description: Optional human-readable detail about the current credential status.
+          type: string
+    RotateDatasourceCredentialsRequest:
+      description: |
+        Request to rotate the credentials used by a datasource instance. Replaces the active credential material with the supplied values.
+        `credentials.values` must contain only keys recognized as credential material for the datasource type (for example `clientSecret` for OAuth, `apiToken` for API-token auth, `privateKey` for certificate auth). Unrecognized keys, or keys that correspond to non-credential configuration, cause a 400; use the configure endpoint to change non-credential config.
+      type: object
+      required:
+        - credentials
+      properties:
+        credentials:
+          $ref: '#/components/schemas/DatasourceInstanceConfiguration'
+  parameters:
+    datasourceId:
+      name: datasourceId
+      in: path
+      description: The datasource type identifier (e.g. o365sharepoint)
+      required: true
+      schema:
+        type: string
+        example: o365sharepoint
+    instanceId:
+      name: instanceId
+      in: path
+      description: The datasource instance identifier
+      required: true
+      schema:
+        type: string
+        example: o365sharepoint_abc123
+    datasourceInstanceId:
+      name: datasourceInstanceId
+      in: path
+      description: The full datasource instance identifier (e.g. o365sharepoint_abc123)
+      required: true
+      schema:
+        type: string
+        example: o365sharepoint_abc123

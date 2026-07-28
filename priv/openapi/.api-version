@@ -1,0 +1,10 @@
+# Provenance of the OpenAPI descriptions in this directory.
+# Written by `mix glean.specs`; do not edit by hand.
+repository: gleanwork/open-api
+directory: source_specs
+ref: main
+commit: 2c18b1b008e24ca5b6f7f7ca56375301d2683407
+client_rest.yaml: 0.9.0
+indexing.yaml: 0.9.0
+platform.yaml: 2026-04-01
+admin_rest.yaml: 0.9.0

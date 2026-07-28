@@ -1,0 +1,89 @@
+defmodule Gleanex.MixProject do
+  use Mix.Project
+
+  @version "0.1.0"
+  @source_url "https://github.com/sgerrand/gleanex"
+
+  def project do
+    [
+      app: :gleanex,
+      version: @version,
+      elixir: "~> 1.20",
+      start_permanent: Mix.env() == :prod,
+      elixirc_paths: elixirc_paths(Mix.env()),
+      deps: deps(),
+      description: "Elixir client for the Glean Client, Indexing, Platform and Admin APIs.",
+      package: package(),
+      docs: docs(),
+      name: "Gleanex",
+      source_url: @source_url,
+      dialyzer: [plt_add_apps: [:mix], ignore_warnings: ".dialyzer_ignore.exs"]
+    ]
+  end
+
+  def application do
+    [
+      extra_applications: [:logger]
+    ]
+  end
+
+  defp elixirc_paths(:test), do: ["lib", "test/support"]
+  # `dev/` holds the code generation plugin. It depends on oapi_generator, which
+  # is a dev-only dependency, so it must never be compiled into the package.
+  defp elixirc_paths(:dev), do: ["lib", "dev"]
+  defp elixirc_paths(_), do: ["lib"]
+
+  defp deps do
+    [
+      {:req, "~> 0.7"},
+      {:telemetry, "~> 1.2"},
+      # Req.Test builds its stubs on Plug.Conn.
+      {:plug, "~> 1.16", only: :test},
+      {:oapi_generator, "~> 0.4", only: :dev, runtime: false},
+      {:yaml_elixir, "~> 2.9", only: [:dev, :test], runtime: false},
+      {:ex_doc, "~> 0.34", only: :dev, runtime: false},
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false}
+    ]
+  end
+
+  defp package do
+    [
+      licenses: ["MIT"],
+      links: %{
+        "GitHub" => @source_url,
+        "Glean OpenAPI specs" => "https://github.com/gleanwork/open-api"
+      },
+      # The descriptions themselves are not shipped: they are only needed to
+      # regenerate, which happens in the repository. The provenance file is,
+      # so an installed copy can say which upstream commit it came from.
+      files:
+        ~w(lib priv/openapi/.api-version .formatter.exs mix.exs README.md CHANGELOG.md LICENSE)
+    ]
+  end
+
+  defp docs do
+    [
+      main: "readme",
+      extras: ["README.md", "CHANGELOG.md"],
+      source_ref: "v#{@version}",
+      # Dev-only build tooling, not part of the published surface.
+      ignore_modules: [Gleanex.Generator.Processor],
+      groups_for_modules: [
+        Core: [
+          Gleanex,
+          Gleanex.Config,
+          Gleanex.Error,
+          Gleanex.HTTP,
+          Gleanex.Retry,
+          Gleanex.Pagination,
+          Gleanex.SSE
+        ],
+        "Client API": [~r/^Gleanex\.Client\./],
+        "Indexing API": [~r/^Gleanex\.Indexing\./],
+        "Platform API": [~r/^Gleanex\.Platform\./],
+        "Admin API": [~r/^Gleanex\.Admin\./]
+      ]
+    ]
+  end
+end

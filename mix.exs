@@ -49,7 +49,7 @@ defmodule Gleanex.MixProject do
 
   defp package do
     [
-      licenses: ["MIT"],
+      licenses: ["BSD-2-Clause"],
       links: %{
         "GitHub" => @source_url,
         "Glean OpenAPI specs" => "https://github.com/gleanwork/open-api"

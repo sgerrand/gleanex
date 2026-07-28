@@ -181,4 +181,4 @@ from `config/config.exs` and the plugin in `dev/gleanex/generator/processor.ex`.
 
 ## Licence
 
-MIT. Gleanex is not affiliated with or endorsed by Glean.
+BSD 2-Clause. Gleanex is not affiliated with or endorsed by Glean.

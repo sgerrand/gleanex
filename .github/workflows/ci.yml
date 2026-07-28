@@ -1,0 +1,135 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# A new push to a branch makes the previous run's result irrelevant.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  ELIXIR_VERSION: "1.20.2"
+  OTP_VERSION: "29.0"
+
+jobs:
+  test:
+    name: Test and lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: erlef/setup-beam@v1
+        id: beam
+        with:
+          elixir-version: ${{ env.ELIXIR_VERSION }}
+          otp-version: ${{ env.OTP_VERSION }}
+
+      - name: Restore dependencies and build
+        uses: actions/cache@v4
+        with:
+          path: |
+            deps
+            _build
+          key: test-${{ runner.os }}-${{ steps.beam.outputs.otp-version }}-${{ steps.beam.outputs.elixir-version }}-${{ hashFiles('mix.lock') }}
+          restore-keys: |
+            test-${{ runner.os }}-${{ steps.beam.outputs.otp-version }}-${{ steps.beam.outputs.elixir-version }}-
+
+      - run: mix deps.get
+
+      # Fails if mix.lock has entries no longer reachable from mix.exs.
+      - run: mix deps.unlock --check-unused
+
+      - run: mix format --check-formatted
+
+      - run: mix compile --warnings-as-errors
+
+      - run: mix test
+
+      - run: mix credo --strict
+
+  generated:
+    name: Generated code is current
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: erlef/setup-beam@v1
+        id: beam
+        with:
+          elixir-version: ${{ env.ELIXIR_VERSION }}
+          otp-version: ${{ env.OTP_VERSION }}
+
+      - name: Restore dependencies and build
+        uses: actions/cache@v4
+        with:
+          path: |
+            deps
+            _build
+          key: dev-${{ runner.os }}-${{ steps.beam.outputs.otp-version }}-${{ steps.beam.outputs.elixir-version }}-${{ hashFiles('mix.lock') }}
+          restore-keys: |
+            dev-${{ runner.os }}-${{ steps.beam.outputs.otp-version }}-${{ steps.beam.outputs.elixir-version }}-
+
+      - run: mix deps.get
+
+      # Regeneration reads the descriptions committed in priv/openapi, so this
+      # needs no network access and cannot be affected by an upstream change
+      # landing mid-run.
+      - name: Regenerate all four APIs
+        run: mix glean.gen
+
+      # --porcelain rather than `git diff`, so a newly generated file that is not
+      # yet tracked counts as drift too.
+      - name: Fail if regeneration changed anything
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "::error::Generated code does not match priv/openapi. Run 'mix glean.gen' and commit the result."
+            git status --short
+            git diff --stat
+            exit 1
+          fi
+
+  dialyzer:
+    name: Dialyzer
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: erlef/setup-beam@v1
+        id: beam
+        with:
+          elixir-version: ${{ env.ELIXIR_VERSION }}
+          otp-version: ${{ env.OTP_VERSION }}
+
+      - name: Restore dependencies and build
+        uses: actions/cache@v4
+        with:
+          path: |
+            deps
+            _build
+          key: dev-${{ runner.os }}-${{ steps.beam.outputs.otp-version }}-${{ steps.beam.outputs.elixir-version }}-${{ hashFiles('mix.lock') }}
+          restore-keys: |
+            dev-${{ runner.os }}-${{ steps.beam.outputs.otp-version }}-${{ steps.beam.outputs.elixir-version }}-
+
+      # The PLT is expensive to build and only changes when the compiler or the
+      # dependencies do, so it is cached separately from the build.
+      - name: Restore PLT
+        uses: actions/cache@v4
+        with:
+          path: priv/plts
+          key: plt-${{ runner.os }}-${{ steps.beam.outputs.otp-version }}-${{ steps.beam.outputs.elixir-version }}-${{ hashFiles('mix.lock') }}
+          restore-keys: |
+            plt-${{ runner.os }}-${{ steps.beam.outputs.otp-version }}-${{ steps.beam.outputs.elixir-version }}-
+
+      - run: mix deps.get
+
+      - run: mix dialyzer --format github

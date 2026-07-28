@@ -22,3 +22,6 @@ erl_crash.dump
 # Ignore package tarball (built via "mix hex.build").
 gleanex-*.tar
 
+
+# Dialyzer PLT, cached by CI rather than committed.
+/priv/plts/

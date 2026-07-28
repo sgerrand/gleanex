@@ -17,7 +17,13 @@ defmodule Gleanex.MixProject do
       docs: docs(),
       name: "Gleanex",
       source_url: @source_url,
-      dialyzer: [plt_add_apps: [:mix], ignore_warnings: ".dialyzer_ignore.exs"]
+      dialyzer: [
+        plt_add_apps: [:mix],
+        ignore_warnings: ".dialyzer_ignore.exs",
+        # Kept out of _build so CI can cache it on its own key: the PLT only
+        # changes when the compiler or the dependencies do.
+        plt_file: {:no_warn, "priv/plts/dialyzer.plt"}
+      ]
     ]
   end
 

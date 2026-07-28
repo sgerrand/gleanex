@@ -1,0 +1,17 @@
+defmodule Gleanex.Indexing.EmployeeTeamInfo do
+  @moduledoc """
+  Provides struct and type for a EmployeeTeamInfo
+  """
+
+  @type t :: %__MODULE__{id: String.t() | nil, name: String.t() | nil, url: String.t() | nil}
+
+  defstruct [:id, :name, :url]
+
+  @doc false
+  @spec __fields__(atom) :: keyword
+  def __fields__(type \\ :t)
+
+  def __fields__(:t) do
+    [id: :string, name: :string, url: {:string, "uri"}]
+  end
+end

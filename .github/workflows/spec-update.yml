@@ -1,0 +1,182 @@
+name: Glean spec update
+
+# Glean updates gleanwork/open-api on their own schedule. This checks weekly and
+# opens a pull request when the descriptions have moved, so new endpoints show up
+# as a reviewable diff rather than being noticed when someone needs one.
+on:
+  schedule:
+    # Mondays at 06:00 UTC.
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Ref of gleanwork/open-api to pull (branch, tag or commit)"
+        required: false
+        default: "main"
+
+concurrency:
+  group: glean-spec-update
+  cancel-in-progress: false
+
+# Needs write access to push the branch and open the pull request. This also
+# requires "Allow GitHub Actions to create and approve pull requests" under
+# Settings > Actions > General; without it, gh pr create is refused.
+permissions:
+  contents: write
+  pull-requests: write
+
+env:
+  ELIXIR_VERSION: "1.20.2"
+  OTP_VERSION: "29.0"
+  BRANCH: glean/spec-update
+
+jobs:
+  update:
+    name: Check for upstream changes
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: erlef/setup-beam@v1
+        id: beam
+        with:
+          elixir-version: ${{ env.ELIXIR_VERSION }}
+          otp-version: ${{ env.OTP_VERSION }}
+
+      - name: Restore dependencies and build
+        uses: actions/cache@v4
+        with:
+          path: |
+            deps
+            _build
+          key: dev-${{ runner.os }}-${{ steps.beam.outputs.otp-version }}-${{ steps.beam.outputs.elixir-version }}-${{ hashFiles('mix.lock') }}
+          restore-keys: |
+            dev-${{ runner.os }}-${{ steps.beam.outputs.otp-version }}-${{ steps.beam.outputs.elixir-version }}-
+
+      - run: mix deps.get
+
+      - name: Record the commit currently vendored
+        id: before
+        run: echo "commit=$(grep '^commit:' priv/openapi/.api-version | cut -d' ' -f2)" >> "$GITHUB_OUTPUT"
+
+      - name: Download the latest descriptions
+        run: mix glean.specs --force --ref "${{ inputs.ref || 'main' }}"
+
+      - name: Has anything changed?
+        id: changed
+        run: |
+          if [ -z "$(git status --porcelain priv/openapi)" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "Descriptions are unchanged at ${{ steps.before.outputs.commit }}. Nothing to do."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "commit=$(grep '^commit:' priv/openapi/.api-version | cut -d' ' -f2)" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Regenerate all four APIs
+        if: steps.changed.outputs.changed == 'true'
+        run: mix glean.gen
+
+      # Every upstream sync rewrites info.x-source-commit-sha in all four
+      # descriptions, whether or not the API itself moved. Gating the pull
+      # request on the descriptions alone would therefore open one most weeks
+      # with no change to review, so the real gate is the generated client.
+      - name: Did the client actually change?
+        if: steps.changed.outputs.changed == 'true'
+        id: client
+        run: |
+          if [ -z "$(git status --porcelain lib/gleanex)" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "Descriptions moved to ${{ steps.changed.outputs.commit }} but only their"
+            echo "recorded source commit changed; the generated client is identical."
+            echo "Nothing to review, so no pull request."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Summarise the change
+        if: steps.client.outputs.changed == 'true'
+        id: summary
+        run: |
+          # Operation modules also define __fields__ for their inline schemas, so
+          # those are filtered out to leave only callable operations.
+          operations=$(grep -rh '^  def ' lib/gleanex/*/operations/*.ex | grep -vc '__fields__')
+          {
+            echo "operations=$operations"
+            echo "files=$(git status --porcelain | wc -l | tr -d ' ')"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Push the branch
+        if: steps.client.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -C "$BRANCH"
+          git add -A
+          git commit \
+            -m "chore: update vendored Glean OpenAPI descriptions" \
+            -m "Regenerated from gleanwork/open-api at ${{ steps.changed.outputs.commit }}, previously ${{ steps.before.outputs.commit }}." \
+            -m "Opened by the scheduled spec update workflow."
+          # Plain --force: this branch belongs to the workflow, and
+          # --force-with-lease has no baseline to compare against after a fresh
+          # checkout that never fetched it.
+          git push --force origin "$BRANCH"
+
+      - name: Open or update the pull request
+        if: steps.client.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # A quoted heredoc written to a file, rather than $(cat <<EOF): the
+          # body contains apostrophes and backticks, and nothing in it should be
+          # expanded by the shell. Actions has already substituted every ${{ }}
+          # into this script before bash sees it.
+          cat > "$RUNNER_TEMP/pr-body.md" <<'BODY'
+          :tipping_hand_person: These changes vendor a newer copy of Glean's OpenAPI
+          descriptions and regenerate the client from them.
+
+          | | |
+          | --- | --- |
+          | Was | `${{ steps.before.outputs.commit }}` |
+          | Now | `${{ steps.changed.outputs.commit }}` |
+          | Files touched | ${{ steps.summary.outputs.files }} |
+          | Operations after regeneration | ${{ steps.summary.outputs.operations }} |
+
+          [Compare upstream](https://github.com/gleanwork/open-api/compare/${{ steps.before.outputs.commit }}...${{ steps.changed.outputs.commit }})
+
+          ## What to check
+
+          - Operation counts moving down means Glean removed endpoints, which is a
+            breaking change for anyone calling them.
+          - Renamed functions. The generator plugin derives names from operation IDs
+            and paths, so an upstream rename renames a public function here.
+          - Struct fields that disappeared, for the same reason.
+
+          Checks ran in the workflow that opened this. They do **not** re-run on this
+          pull request: branches pushed with `GITHUB_TOKEN` do not trigger workflows.
+          BODY
+
+          title="chore: update Glean OpenAPI descriptions to ${{ steps.changed.outputs.commit }}"
+
+          if gh pr view "$BRANCH" --json number >/dev/null 2>&1; then
+            gh pr edit "$BRANCH" --title "$title" --body-file "$RUNNER_TEMP/pr-body.md"
+            echo "Updated the existing pull request."
+          else
+            gh pr create \
+              --base main \
+              --head "$BRANCH" \
+              --title "$title" \
+              --body-file "$RUNNER_TEMP/pr-body.md"
+          fi
+
+      # Runs last so the pull request exists either way. A red run here means the
+      # new descriptions do not generate, compile or pass cleanly, and the branch
+      # is there to investigate.
+      - name: Verify the regenerated client
+        if: steps.client.outputs.changed == 'true'
+        run: |
+          mix format --check-formatted
+          mix compile --warnings-as-errors
+          mix test
+          mix credo --strict

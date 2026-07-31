@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   test:
-    name: Test and lint
+    name: Tests
     runs-on: ubuntu-latest
 
     steps:

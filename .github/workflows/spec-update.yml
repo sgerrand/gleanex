@@ -130,8 +130,8 @@ jobs:
         run: |
           # A quoted heredoc written to a file, rather than $(cat <<EOF): the
           # body contains apostrophes and backticks, and nothing in it should be
-          # expanded by the shell. Actions has already substituted every ${{ }}
-          # into this script before bash sees it.
+          # expanded by the shell. Actions has already substituted every
+          # expression into this script before bash sees it.
           cat > "$RUNNER_TEMP/pr-body.md" <<'BODY'
           :tipping_hand_person: These changes vendor a newer copy of Glean's OpenAPI
           descriptions and regenerate the client from them.

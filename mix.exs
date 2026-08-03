@@ -17,6 +17,18 @@ defmodule Gleanex.MixProject do
       docs: docs(),
       name: "Gleanex",
       source_url: @source_url,
+      test_coverage: [
+        # Nested under :summary deliberately. A top-level `threshold:` is
+        # accepted without complaint and then ignored, leaving the default of 90
+        # in force, so the setting has to live here to actually be enforced.
+        summary: [threshold: 100],
+        # Test scaffolding under test/support: stand-ins for generated schemas
+        # and operations, plus a stub for oapi_generator's api.gen task, which
+        # is absent in this environment. They exist to exercise the library, so
+        # measuring them measures the tests rather than the code. No generated
+        # module carries "Support" in its name, so nothing real is hidden here.
+        ignore_modules: [~r/^Gleanex\..*Support/, Mix.Tasks.Api.Gen]
+      ],
       dialyzer: [
         plt_add_apps: [:mix],
         ignore_warnings: ".dialyzer_ignore.exs",

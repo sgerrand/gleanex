@@ -49,7 +49,9 @@ jobs:
 
       - run: mix compile --warnings-as-errors
 
-      - run: mix test
+      # --cover enforces the 100% threshold set in mix.exs, so a new branch
+      # arriving without a test fails here rather than at review.
+      - run: mix test --cover
 
       - run: mix credo --strict
 

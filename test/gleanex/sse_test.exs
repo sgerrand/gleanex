@@ -57,6 +57,11 @@ defmodule Gleanex.SSETest do
     assert [%Event{retry: nil}] = decode(["retry: soon\ndata: x\n\n"])
   end
 
+  test "an event with fields but no data has nil data" do
+    assert [%Event{id: "1", data: nil}] = decode(["id: 1\n\n"])
+    assert [%Event{event: "ping", data: nil}] = decode(["event: ping\n\n"])
+  end
+
   test "an empty stream yields nothing" do
     assert decode([]) == []
     assert decode([""]) == []

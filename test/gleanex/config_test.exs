@@ -69,6 +69,62 @@ defmodule Gleanex.ConfigTest do
     end
   end
 
+  describe "settings from the application environment" do
+    test "reads a {:system, var} tuple at call time, not at compile time" do
+      with_env(%{"GLEAN_TOKEN_FROM_TUPLE" => "resolved-later"}, fn ->
+        with_app_env(%{token: {:system, "GLEAN_TOKEN_FROM_TUPLE"}, domain: "acme"}, fn ->
+          assert Config.new([]).token == "resolved-later"
+        end)
+      end)
+    end
+
+    test "treats a {:system, var} tuple naming an unset variable as unset" do
+      with_env(%{"GLEAN_API_TOKEN" => nil, "GLEAN_NOT_SET_ANYWHERE" => nil}, fn ->
+        with_app_env(%{token: {:system, "GLEAN_NOT_SET_ANYWHERE"}, domain: "acme"}, fn ->
+          assert_raise Error, ~r/missing Glean API token/, fn -> Config.new([]) end
+        end)
+      end)
+    end
+
+    test "picks up the retry policy, timeout and Req options" do
+      retry = Gleanex.Retry.disabled()
+
+      with_app_env(
+        %{domain: "acme", token: "t", retry: retry, receive_timeout: 1234, req_options: [foo: 1]},
+        fn ->
+          config = Config.new([])
+
+          assert config.retry == retry
+          assert config.receive_timeout == 1234
+          assert config.req_options == [foo: 1]
+        end
+      )
+    end
+
+    test "default/0 builds the same config as new/0" do
+      with_app_env(%{domain: "acme", token: "t"}, fn ->
+        assert Config.default() == Config.new()
+      end)
+    end
+  end
+
+  describe "prefix/1 and apis/0" do
+    test "lists the four APIs" do
+      assert Enum.sort(Config.apis()) == [:admin, :client, :indexing, :platform]
+    end
+
+    test "gives each API its path prefix" do
+      assert Config.prefix(:client) == "/rest/api/v1"
+      assert Config.prefix(:indexing) == "/api/index/v1"
+      assert Config.prefix(:platform) == "/api"
+      assert Config.prefix(:admin) == "/rest/api/v1"
+    end
+
+    test "every API has a prefix" do
+      for api <- Config.apis(), do: assert(is_binary(Config.prefix(api)))
+    end
+  end
+
   describe "base_url/2" do
     setup do
       %{config: Gleanex.new(domain: "acme", token: "secret")}
@@ -119,6 +175,22 @@ defmodule Gleanex.ConfigTest do
       assert :ok = Config.check_scope(client, :platform)
       assert :ok = Config.check_scope(client, :admin)
       assert :ok = Config.check_scope(indexing, :indexing)
+    end
+  end
+
+  defp with_app_env(settings, fun) do
+    keys = Map.keys(settings)
+    previous = Map.new(keys, &{&1, Application.get_env(:gleanex, &1)})
+
+    Enum.each(settings, fn {key, value} -> Application.put_env(:gleanex, key, value) end)
+
+    try do
+      fun.()
+    after
+      Enum.each(previous, fn
+        {key, nil} -> Application.delete_env(:gleanex, key)
+        {key, value} -> Application.put_env(:gleanex, key, value)
+      end)
     end
   end
 

@@ -156,10 +156,14 @@ defmodule Gleanex.Streaming do
 
   # An unsuccessful response is streamed too, so its body has to be drained
   # before there is anything to report.
-  defp collect_error_body(%Req.Response{body: body} = response) when is_binary(body), do: response
-
+  #
+  # The is_binary guard is defensive and never fires today: `into: :self` is
+  # merged last in put_streaming_options, so a caller cannot turn it off, and Req
+  # hands back a Req.Response.Async for every status including errors. It stays
+  # because draining is the only branch that would crash if that ever changed.
   defp collect_error_body(%Req.Response{body: body} = response) do
-    collected = body |> Enum.to_list() |> IO.iodata_to_binary()
+    collected =
+      if is_binary(body), do: body, else: body |> Enum.to_list() |> IO.iodata_to_binary()
 
     case JSON.decode(collected) do
       {:ok, decoded} -> %{response | body: decoded}

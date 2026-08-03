@@ -121,5 +121,20 @@ defmodule Gleanex.PaginationTest do
 
       assert [] = config |> Pagination.stream_items(fun, %{}, :results) |> Enum.to_list()
     end
+
+    test "wraps a field holding a single record rather than a list", %{config: config} do
+      {fun, _seen} = operation([{:ok, %{"results" => %{"id" => 1}}}])
+
+      assert [%{"id" => 1}] =
+               config |> Pagination.stream_items(fun, %{}, :results) |> Enum.to_list()
+    end
+
+    test "treats a page that is not a map as having no records", %{config: config} do
+      # Some endpoints answer with a bare list or string; there is no cursor to
+      # follow and nothing to flatten, so the stream ends after that page.
+      {fun, _seen} = operation([{:ok, "no records here"}])
+
+      assert [] = config |> Pagination.stream_items(fun, %{}, :results) |> Enum.to_list()
+    end
   end
 end

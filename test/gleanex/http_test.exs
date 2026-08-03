@@ -291,6 +291,97 @@ defmodule Gleanex.HTTPTest do
     end
   end
 
+  describe "api_for/1" do
+    test "reads the API from the second segment of the module name" do
+      assert Gleanex.HTTP.api_for(Gleanex.Client.Search) == :client
+      assert Gleanex.HTTP.api_for(Gleanex.Indexing.Documents) == :indexing
+      assert Gleanex.HTTP.api_for(Gleanex.Platform.Agents) == :platform
+      assert Gleanex.HTTP.api_for(Gleanex.Admin.Governance) == :admin
+    end
+
+    test "accepts the {module, function} pair the generated code passes" do
+      assert Gleanex.HTTP.api_for({Gleanex.Indexing.People, :indexemployee}) == :indexing
+    end
+
+    test "falls back to the Client API for anything unrecognised" do
+      # A module outside the Gleanex namespace.
+      assert Gleanex.HTTP.api_for(SomeOtherLibrary.Thing) == :client
+      # A Gleanex module that is not one of the four APIs.
+      assert Gleanex.HTTP.api_for(Gleanex.Streaming) == :client
+      # An Erlang module, which has no Elixir name to split.
+      assert Gleanex.HTTP.api_for(:crypto) == :client
+      # No operation at all.
+      assert Gleanex.HTTP.api_for(nil) == :client
+    end
+  end
+
+  # These reach parts of the operation map that no generated operation happens
+  # to produce, so they are built by hand against the same public contract the
+  # generated code uses.
+  describe "operation maps built by hand" do
+    test "an operation with no body sends none", %{config: config} do
+      Req.Test.stub(GleanexStub, fn conn ->
+        {:ok, body, conn} = Plug.Conn.read_body(conn)
+        assert body == ""
+        Req.Test.json(conn, %{})
+      end)
+
+      assert {:ok, _} =
+               Gleanex.HTTP.request(%{
+                 call: {Gleanex.Client.Handmade, :no_body},
+                 url: "/thing",
+                 method: :post,
+                 body: nil,
+                 opts: [config: config]
+               })
+    end
+
+    test "an operation that declares no content type sends JSON", %{config: config} do
+      Req.Test.stub(GleanexStub, fn conn ->
+        assert ["application/json"] = Plug.Conn.get_req_header(conn, "content-type")
+        Req.Test.json(conn, %{})
+      end)
+
+      assert {:ok, _} =
+               Gleanex.HTTP.request(%{
+                 call: {Gleanex.Client.Handmade, :untyped_body},
+                 url: "/thing",
+                 method: :post,
+                 body: %{a: 1},
+                 opts: [config: config]
+               })
+    end
+
+    test "a :default response type is used when no status matches", %{config: config} do
+      Req.Test.stub(GleanexStub, fn conn ->
+        Req.Test.json(conn, %{trackingToken: "from-default"})
+      end)
+
+      assert {:ok, %SearchResponse{trackingToken: "from-default"}} =
+               Gleanex.HTTP.request(%{
+                 call: {Gleanex.Client.Handmade, :defaulted},
+                 url: "/thing",
+                 method: :get,
+                 response: [{201, :map}, {:default, {SearchResponse, :t}}],
+                 opts: [config: config]
+               })
+    end
+
+    test "a missing method defaults to GET and a missing url to the root", %{config: config} do
+      Req.Test.stub(GleanexStub, fn conn ->
+        assert conn.method == "GET"
+        assert conn.request_path == "/rest/api/v1/"
+        Req.Test.json(conn, %{})
+      end)
+
+      assert {:ok, _} =
+               Gleanex.HTTP.request(%{
+                 call: {Gleanex.Client.Handmade, :bare},
+                 opts: [config: config]
+               })
+    end
+  end
+
   describe "telemetry" do
     test "emits a span with the API and operation", %{config: config} do
       Req.Test.stub(GleanexStub, fn conn -> Req.Test.json(conn, %{}) end)

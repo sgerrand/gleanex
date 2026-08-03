@@ -83,6 +83,26 @@ defmodule Gleanex.DecoderTest do
       assert Decoder.decode(nil, {:union, [{Person, :t}, :null]}) == nil
     end
 
+    test "passes a map through when the union holds no struct to match it against" do
+      assert Decoder.decode(%{"a" => 1}, {:union, [:string, :integer]}) == %{"a" => 1}
+    end
+
+    test "matches on atom keys as well as string keys" do
+      payload = %{name: "Ada", email: "ada@example.com"}
+
+      assert %Person{name: "Ada"} =
+               Decoder.decode(payload, {:union, [{Person, :t}, {Result, :t}]})
+    end
+
+    test "passes a scalar through, since there is nothing to match on" do
+      assert Decoder.decode("text", {:union, [{Person, :t}, :string]}) == "text"
+      assert Decoder.decode(7, {:union, [{Person, :t}, :integer]}) == 7
+    end
+
+    test "passes a list through when the union has no list branch" do
+      assert Decoder.decode([1, 2], {:union, [{Person, :t}, :string]}) == [1, 2]
+    end
+
     test "finds the list branch for a list payload" do
       payload = [%{"name" => "Ada"}]
       assert [%Person{name: "Ada"}] = Decoder.decode(payload, {:union, [:null, [{Person, :t}]]})

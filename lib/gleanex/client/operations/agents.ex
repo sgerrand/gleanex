@@ -71,7 +71,7 @@ defmodule Gleanex.Client.Agents do
         {403, :null},
         {404, :string},
         {409, :string},
-        {422, :string},
+        {422, {Gleanex.Client.UnauthorizedAgentToolsError, :t}},
         {500, :null}
       ],
       opts: opts
@@ -105,7 +105,7 @@ defmodule Gleanex.Client.Agents do
         {403, :null},
         {404, :null},
         {409, :null},
-        {422, :null},
+        {422, {Gleanex.Client.UnauthorizedAgentToolsError, :t}},
         {500, :null}
       ],
       opts: opts
@@ -218,6 +218,49 @@ defmodule Gleanex.Client.Agents do
         {403, :null},
         {404, :string},
         {422, :string},
+        {500, :null}
+      ],
+      opts: opts
+    })
+  end
+
+  @doc """
+  Import an agent
+
+  Imports an [agent](https://developers.glean.com/agents/agents-api) from its on-disk folder representation (spec.yaml, instructions.md, skills/, subagents/) packaged as a zip, and creates or updates the agent. Inverse of the export flow: the folder-to-schema conversion runs server-side. The bundle must contain only regular files; symlinks are resolved by the caller at packaging time.
+
+  ## Options
+
+    * `locale`: The client's preferred locale in rfc5646 format (e.g. `en`, `ja`, `pt-BR`). If omitted, the `Accept-Language` will be used. If not present or not supported, defaults to the closest match or `en`.
+    * `timezoneOffset`: The offset of the client's timezone in minutes from UTC. e.g. PDT is -420 because it's 7 hours behind UTC.
+
+  ## Request Body
+
+  **Content Types**: `multipart/form-data`
+  """
+  @spec import_agent(
+          agent_id :: String.t(),
+          body :: Gleanex.Client.ImportAgentRequest.t(),
+          opts :: keyword
+        ) :: {:ok, Gleanex.Client.ImportAgentResponse.t()} | {:error, Gleanex.Error.t()}
+  def import_agent(agent_id, body, opts \\ []) do
+    client = opts[:client] || @default_client
+    query = Keyword.take(opts, [:locale, :timezoneOffset])
+
+    client.request(%{
+      args: [agent_id: agent_id, body: body],
+      call: {Gleanex.Client.Agents, :import_agent},
+      url: "/agents/#{agent_id}/import",
+      body: body,
+      method: :post,
+      query: query,
+      request: [{"multipart/form-data", {Gleanex.Client.ImportAgentRequest, :t}}],
+      response: [
+        {200, {Gleanex.Client.ImportAgentResponse, :t}},
+        {400, :null},
+        {401, :null},
+        {403, :null},
+        {404, :string},
         {500, :null}
       ],
       opts: opts

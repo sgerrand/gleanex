@@ -50,6 +50,7 @@ defmodule Gleanex.Client.FeedRequest do
           "PLAN_MY_DAY",
           "END_MY_DAY",
           "STARTER_KIT",
+          "MEETING_PREP_AUTOMATION",
           "MID_DAY_CATCH_UP",
           "QUERY_SUGGESTION",
           "COWORK_CUJ_PROMO",

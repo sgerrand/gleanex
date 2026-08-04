@@ -117,6 +117,7 @@ defmodule Gleanex.Client.FeedEntry do
            "STARTER_KIT_ORG_CHART",
            "STARTER_KIT_ADD_DOC",
            "MEETING_RECAP",
+           "MEETING_PREP_AUTOMATION",
            "ACTIVE_DISCUSSION",
            "MID_DAY_CATCH_UP",
            "QUERY_SUGGESTION",

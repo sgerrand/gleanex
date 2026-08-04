@@ -33,6 +33,7 @@ defmodule Gleanex.Platform.ProblemDetailError do
            "conflict",
            "gone",
            "unprocessable_query",
+           "tools_unauthorized",
            "rate_limit_exceeded",
            "internal_error",
            "service_unavailable"

@@ -2,7 +2,7 @@ openapi: 3.0.0
 info:
   version: '2026-04-01'
   title: Glean Platform API
-  x-source-commit-sha: 9b36aa40d235af4dfc387e9f4c62ed95a8dae326
+  x-source-commit-sha: b85d08259cae10cc2b68c7724c1c4898aeeadfad
 servers:
   - url: https://{domain}-be.glean.com/api
     variables:
@@ -221,6 +221,82 @@ paths:
           $ref: '#/components/responses/Conflict'
         '413':
           $ref: '#/components/responses/RequestTooLarge'
+        '422':
+          description: Returned when the agent has tools the caller must authorize before the run can start. `authentication_suggestions` names each such tool; POST its `server_id` to the Client API's `/tool-servers/{serverId}/auth` with `returnUrl` in the request body to obtain an `authorizationUrl` to redirect the end user to, then retry the run once OAuth completes.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedAgentToolsProblem'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /chat:
+    post:
+      tags:
+        - Chat
+      summary: Create a chat response
+      description: |
+        Run an assistant turn. Set `stream` to true to receive server-sent events; otherwise the response is a typed JSON response object.
+      operationId: platform-chat-create
+      x-visibility: Public
+      x-glean-sdk:
+        group: chat
+        method: create
+      x-glean-experimental:
+        id: e65a0a77-97a2-4c91-be60-eae7f6238015
+        introduced: '2026-07-14'
+      x-codegen-request-body-name: payload
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatCreateRequest'
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatCompletedResponse'
+            text/event-stream:
+              schema:
+                type: string
+                description: |
+                  Server-sent events for a streaming chat run. Event payloads are documented under ChatStream* schemas.
+                example: |
+                  id: 1
+                  event: response.created
+                  data: {"type":"response.created","response_id":"resp_e65a0a77-97a2-4c91-be60-eae7f6238015"}
+
+                  id: 2
+                  event: response.output_text.delta
+                  data: {"type":"response.output_text.delta","response_id":"resp_e65a0a77-97a2-4c91-be60-eae7f6238015","delta":"Hello"}
+
+                  id: 3
+                  event: response.output_text.done
+                  data: {"type":"response.output_text.done","response_id":"resp_e65a0a77-97a2-4c91-be60-eae7f6238015","text":"Hello"}
+
+                  id: 4
+                  event: response.completed
+                  data: {"type":"response.completed","response_id":"resp_e65a0a77-97a2-4c91-be60-eae7f6238015","response":{"id":"resp_e65a0a77-97a2-4c91-be60-eae7f6238015","object":"response","status":"completed","output":[{"type":"message","role":"assistant","content":[{"type":"output_text","text":"Hello"}]}],"store":true,"request_id":"req_123","created_at":"2026-07-14T20:00:00Z"}}
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '408':
+          $ref: '#/components/responses/RequestTimeout'
+        '413':
+          $ref: '#/components/responses/RequestTooLarge'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
         '429':
           $ref: '#/components/responses/TooManyRequests'
         '500':
@@ -364,6 +440,68 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '408':
+          $ref: '#/components/responses/RequestTimeout'
+        '413':
+          $ref: '#/components/responses/RequestTooLarge'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /skills/sources/preview:
+    post:
+      tags:
+        - Skills
+      summary: Preview a GitHub skill source
+      description: |
+        Inspect a GitHub URL without persisting a source or any discovered skills. Set stream to true to receive repository scan progress as server-sent events; otherwise the response contains the completed preview.
+      operationId: platform-skills-preview-source
+      x-visibility: Public
+      x-glean-sdk:
+        group: skills
+        method: previewSource
+      x-glean-experimental:
+        id: 1629009b-244a-400a-bf55-c441dfbc586c
+        introduced: '2026-07-23'
+      x-codegen-request-body-name: request
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SkillSourcePreviewRequest'
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SkillSourcePreviewResponse'
+            text/event-stream:
+              schema:
+                type: string
+                description: |
+                  Server-sent scan, progress, skill, and result events. A failed stream
+                  emits `data: {"type":"error","code":"service_unavailable","message":"GitHub is temporarily unavailable."}`
+                  followed by `data: [DONE]` instead of a result event.
+                example: |
+                  data: {"type":"scan","total":1,"skill_paths":["https://github.com/acme/skills/tree/main/skills/example"]}
+
+                  data: {"type":"progress","completed":1,"total":1,"current_skill":"skills/example/SKILL.md"}
+
+                  data: {"type":"skill","skill":{"display_name":"Example","description":"Example skill","source_url":"https://github.com/acme/skills/tree/main/skills/example","commit_sha":"abc123","main_content":"---\nname: Example\n---","files":[],"file_tree":["SKILL.md"]}}
+
+                  data: {"type":"result","response":{"skills":[{"display_name":"Example","description":"Example skill","source_url":"https://github.com/acme/skills/tree/main/skills/example","commit_sha":"abc123","main_content":"---\nname: Example\n---","files":[],"file_tree":["SKILL.md"]}],"failures":[],"request_id":"req-123"}}
+
+                  data: [DONE]
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '408':
           $ref: '#/components/responses/RequestTimeout'
         '413':
@@ -958,6 +1096,7 @@ components:
         - conflict
         - gone
         - unprocessable_query
+        - tools_unauthorized
         - rate_limit_exceeded
         - internal_error
         - service_unavailable
@@ -1013,6 +1152,9 @@ components:
         unprocessable_query:
           status: 422
           title: Unprocessable Query
+        tools_unauthorized:
+          status: 422
+          title: Tools Unauthorized
         rate_limit_exceeded:
           status: 429
           title: Rate Limit Exceeded
@@ -1266,6 +1408,304 @@ components:
         request_id:
           type: string
           description: Platform-generated request ID for support correlation.
+    AuthenticationSuggestion:
+      type: object
+      description: One tool the caller must authorize before the agent can run.
+      required:
+        - server_id
+      properties:
+        tool_name:
+          type: string
+          description: Human-readable tool name.
+        server_id:
+          type: string
+          description: Identifier to POST to `/tool-servers/{serverId}/auth` (Client API) with `returnUrl` in the request body to obtain an `authorizationUrl` to redirect the end user to.
+    UnauthorizedAgentToolsProblem:
+      description: Problem detail extended with `authentication_suggestions` naming each tool the caller must authorize.
+      allOf:
+        - $ref: '#/components/schemas/ProblemDetail'
+        - type: object
+          required:
+            - authentication_suggestions
+          properties:
+            authentication_suggestions:
+              type: array
+              description: One entry per tool the caller must authorize.
+              items:
+                $ref: '#/components/schemas/AuthenticationSuggestion'
+    ChatInputMessage:
+      type: object
+      additionalProperties: false
+      required:
+        - role
+        - content
+      properties:
+        role:
+          type: string
+          enum:
+            - user
+            - assistant
+        content:
+          type: string
+          minLength: 1
+    ChatCreateRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - input
+      properties:
+        input:
+          description: |
+            Either a plain string (single user turn) or a chronological array of `user`/`assistant` messages. The final array message must be `user`.
+          oneOf:
+            - type: string
+              minLength: 1
+            - type: array
+              minItems: 1
+              items:
+                $ref: '#/components/schemas/ChatInputMessage'
+        stream:
+          type: boolean
+          description: |
+            When true, respond with `text/event-stream`. When false or omitted, respond with `application/json`.
+          default: false
+        store:
+          type: boolean
+          description: |
+            When true (default), persist the interaction and return a `conversation_id`. When false, run ephemerally with no persistence.
+          default: true
+        conversation_id:
+          type: string
+          minLength: 1
+          description: |
+            Continue an existing stored conversation. Incompatible with message-array `input` and with `store: false`.
+    ChatStreamResponseId:
+      type: string
+      minLength: 1
+      pattern: ^resp_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$
+      description: |
+        Platform-owned, non-persisted response envelope identifier in `resp_<uuid>` form. The same identifier is used for every event in one streamed response.
+    ChatDocumentSource:
+      type: object
+      additionalProperties: false
+      required:
+        - type
+      properties:
+        type:
+          type: string
+          enum:
+            - document
+        document_id:
+          type: string
+          minLength: 1
+        url:
+          type: string
+          minLength: 1
+        title:
+          type: string
+        datasource:
+          type: string
+      anyOf:
+        - required:
+            - document_id
+        - required:
+            - url
+    ChatPersonSource:
+      type: object
+      additionalProperties: false
+      required:
+        - type
+        - person_id
+      properties:
+        type:
+          type: string
+          enum:
+            - person
+        person_id:
+          type: string
+          minLength: 1
+        name:
+          type: string
+        url:
+          type: string
+    ChatFileSource:
+      type: object
+      additionalProperties: false
+      required:
+        - type
+        - file_id
+      properties:
+        type:
+          type: string
+          enum:
+            - file
+        file_id:
+          type: string
+          minLength: 1
+        title:
+          type: string
+        url:
+          type: string
+        datasource:
+          type: string
+    ChatCustomEntitySource:
+      type: object
+      additionalProperties: false
+      required:
+        - type
+        - entity_id
+      properties:
+        type:
+          type: string
+          enum:
+            - custom_entity
+        entity_id:
+          type: string
+          minLength: 1
+        name:
+          type: string
+        title:
+          type: string
+        url:
+          type: string
+        datasource:
+          type: string
+    ChatCitationSource:
+      description: Four-variant citation source union.
+      oneOf:
+        - $ref: '#/components/schemas/ChatDocumentSource'
+        - $ref: '#/components/schemas/ChatPersonSource'
+        - $ref: '#/components/schemas/ChatFileSource'
+        - $ref: '#/components/schemas/ChatCustomEntitySource'
+      discriminator:
+        propertyName: type
+        mapping:
+          document: '#/components/schemas/ChatDocumentSource'
+          person: '#/components/schemas/ChatPersonSource'
+          file: '#/components/schemas/ChatFileSource'
+          custom_entity: '#/components/schemas/ChatCustomEntitySource'
+    ChatCitationSnippet:
+      type: object
+      additionalProperties: false
+      required:
+        - text
+      properties:
+        text:
+          type: string
+          minLength: 1
+        page_number:
+          type: integer
+          nullable: true
+    ChatCitationAnnotation:
+      type: object
+      additionalProperties: false
+      required:
+        - type
+        - sources
+      properties:
+        type:
+          type: string
+          enum:
+            - citation
+        sources:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/ChatCitationSource'
+        start_index:
+          type: integer
+          minimum: 0
+          nullable: true
+        end_index:
+          type: integer
+          minimum: 0
+          nullable: true
+        snippets:
+          type: array
+          nullable: true
+          items:
+            $ref: '#/components/schemas/ChatCitationSnippet'
+    ChatOutputTextContent:
+      type: object
+      additionalProperties: false
+      required:
+        - type
+        - text
+      properties:
+        type:
+          type: string
+          enum:
+            - output_text
+        text:
+          type: string
+        annotations:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChatCitationAnnotation'
+    ChatOutputMessage:
+      type: object
+      additionalProperties: false
+      required:
+        - type
+        - role
+        - content
+      properties:
+        type:
+          type: string
+          enum:
+            - message
+        role:
+          type: string
+          enum:
+            - assistant
+        content:
+          type: array
+          minItems: 1
+          maxItems: 1
+          items:
+            $ref: '#/components/schemas/ChatOutputTextContent'
+    ChatCompletedResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - object
+        - created_at
+        - status
+        - output
+        - store
+        - request_id
+      properties:
+        id:
+          $ref: '#/components/schemas/ChatStreamResponseId'
+        object:
+          type: string
+          enum:
+            - response
+        created_at:
+          type: string
+          format: date-time
+          description: RFC 3339 UTC timestamp when the response was created.
+        status:
+          type: string
+          enum:
+            - completed
+        output:
+          type: array
+          minItems: 1
+          maxItems: 1
+          items:
+            $ref: '#/components/schemas/ChatOutputMessage'
+        store:
+          type: boolean
+        conversation_id:
+          type: string
+          minLength: 1
+          nullable: true
+          description: Present when the interaction was persisted.
+        request_id:
+          type: string
+          minLength: 1
     SkillStatus:
       type: string
       enum:
@@ -1484,6 +1924,111 @@ components:
           description: Non-blocking validation warnings.
           items:
             $ref: '#/components/schemas/PlatformWarning'
+        request_id:
+          type: string
+          description: Platform-generated request ID for support correlation.
+    SkillSourcePreviewRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - source_url
+      properties:
+        source_url:
+          type: string
+          minLength: 1
+          maxLength: 2048
+          description: GitHub URL for a skill directory, SKILL.md file, or repository to inspect.
+        stream:
+          type: boolean
+          default: false
+          description: Whether to stream repository scan progress using server-sent events.
+    SkillSourcePreviewFile:
+      type: object
+      required:
+        - path
+        - content
+      properties:
+        path:
+          type: string
+          description: Relative path within the skill bundle.
+        content:
+          type: string
+          description: UTF-8 file content.
+    SkillSourcePreview:
+      type: object
+      required:
+        - display_name
+        - description
+        - source_url
+        - commit_sha
+        - main_content
+        - files
+        - file_tree
+      properties:
+        display_name:
+          type: string
+          description: Skill name parsed from SKILL.md frontmatter.
+        description:
+          type: string
+          description: Skill description parsed from SKILL.md frontmatter.
+        source_url:
+          type: string
+          description: Resolved URL for this skill within the source.
+        commit_sha:
+          type: string
+          description: Commit SHA used to produce the preview.
+        main_content:
+          type: string
+          description: SKILL.md content fetched as part of the preview.
+        files:
+          type: array
+          description: Supporting files fetched with the skill.
+          items:
+            $ref: '#/components/schemas/SkillSourcePreviewFile'
+        file_tree:
+          type: array
+          description: Relative paths discovered for the skill.
+          items:
+            type: string
+    SkillSourcePreviewFailureCode:
+      type: string
+      enum:
+        - INVALID_SKILL
+        - SKILL_FETCH_FAILED
+      description: Stable machine-readable reason a discovered entry was excluded.
+    SkillSourcePreviewFailure:
+      type: object
+      required:
+        - source_url
+        - code
+        - detail
+      properties:
+        source_url:
+          type: string
+          description: Resolved URL for the entry that could not be previewed.
+        code:
+          $ref: '#/components/schemas/SkillSourcePreviewFailureCode'
+        detail:
+          type: string
+          description: Safe explanation of why the entry was excluded.
+    SkillSourcePreviewResponse:
+      type: object
+      required:
+        - skills
+        - failures
+        - request_id
+      properties:
+        skills:
+          type: array
+          minItems: 1
+          description: Valid skills discovered at the source URL.
+          items:
+            $ref: '#/components/schemas/SkillSourcePreview'
+        failures:
+          type: array
+          description: Discovered entries that could not be included in the preview.
+          items:
+            $ref: '#/components/schemas/SkillSourcePreviewFailure'
         request_id:
           type: string
           description: Platform-generated request ID for support correlation.
@@ -1941,6 +2486,7 @@ x-tagGroups:
   - name: AI
     tags:
       - Agents
+      - Chat
       - Skills
   - name: Data Retrieval
     tags:

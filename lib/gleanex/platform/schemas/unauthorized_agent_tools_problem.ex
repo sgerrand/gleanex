@@ -1,20 +1,31 @@
-defmodule Gleanex.Platform.ProblemDetail do
+defmodule Gleanex.Platform.UnauthorizedAgentToolsProblem do
   @moduledoc """
-  Provides struct and type for a ProblemDetail
+  Provides struct and type for a UnauthorizedAgentToolsProblem
   """
 
   @type t :: %__MODULE__{
-          code: String.t(),
-          detail: String.t(),
+          authentication_suggestions: [Gleanex.Platform.AuthenticationSuggestion.t()] | nil,
+          code: String.t() | nil,
+          detail: String.t() | nil,
           documentation_url: String.t() | nil,
           errors: [Gleanex.Platform.ProblemDetailError.t()] | nil,
-          request_id: String.t(),
-          status: integer,
-          title: String.t(),
-          type: String.t()
+          request_id: String.t() | nil,
+          status: integer | nil,
+          title: String.t() | nil,
+          type: String.t() | nil
         }
 
-  defstruct [:code, :detail, :documentation_url, :errors, :request_id, :status, :title, :type]
+  defstruct [
+    :authentication_suggestions,
+    :code,
+    :detail,
+    :documentation_url,
+    :errors,
+    :request_id,
+    :status,
+    :title,
+    :type
+  ]
 
   @doc false
   @spec __fields__(atom) :: keyword
@@ -22,6 +33,7 @@ defmodule Gleanex.Platform.ProblemDetail do
 
   def __fields__(:t) do
     [
+      authentication_suggestions: [{Gleanex.Platform.AuthenticationSuggestion, :t}],
       code:
         {:enum,
          [

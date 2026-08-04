@@ -284,6 +284,43 @@ defmodule Gleanex.Platform.Skills do
   end
 
   @doc """
+  Preview a GitHub skill source
+
+  Inspect a GitHub URL without persisting a source or any discovered skills. Set stream to true to receive repository scan progress as server-sent events; otherwise the response contains the completed preview.
+
+  ## Request Body
+
+  **Content Types**: `application/json`
+  """
+  @spec preview_source(body :: Gleanex.Platform.SkillSourcePreviewRequest.t(), opts :: keyword) ::
+          {:ok, Gleanex.Platform.SkillSourcePreviewResponse.t() | String.t()}
+          | {:error, Gleanex.Error.t()}
+  def preview_source(body, opts \\ []) do
+    client = opts[:client] || @default_client
+
+    client.request(%{
+      args: [body: body],
+      call: {Gleanex.Platform.Skills, :preview_source},
+      url: "/skills/sources/preview",
+      body: body,
+      method: :post,
+      request: [{"application/json", {Gleanex.Platform.SkillSourcePreviewRequest, :t}}],
+      response: [
+        {200, {:union, [:string, {Gleanex.Platform.SkillSourcePreviewResponse, :t}]}},
+        {400, {Gleanex.Platform.ProblemDetail, :t}},
+        {401, {Gleanex.Platform.ProblemDetail, :t}},
+        {403, {Gleanex.Platform.ProblemDetail, :t}},
+        {408, {Gleanex.Platform.ProblemDetail, :t}},
+        {413, {Gleanex.Platform.ProblemDetail, :t}},
+        {429, {Gleanex.Platform.ProblemDetail, :t}},
+        {500, {Gleanex.Platform.ProblemDetail, :t}},
+        {503, {Gleanex.Platform.ProblemDetail, :t}}
+      ],
+      opts: opts
+    })
+  end
+
+  @doc """
   Update skill
 
   Update mutable metadata for a skill. V1 supports enabling or disabling a skill without changing its content.

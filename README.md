@@ -162,9 +162,9 @@ The typed layer is generated and committed, so users need no Java, no Docker and
 no generator dependency.
 
 ```sh
-mix glean.specs   # download Glean's descriptions into priv/openapi/
-mix glean.gen     # regenerate lib/gleanex/{client,indexing,platform,admin}/
-mix test
+mix glean.specs      # download Glean's descriptions into priv/openapi/
+mix glean.gen        # regenerate lib/gleanex/{client,indexing,platform,admin}/
+mix test --cover     # the suite, at an enforced 100% threshold
 ```
 
 `priv/openapi/.api-version` records the exact upstream commit the committed code
@@ -178,6 +178,23 @@ from under 400 KB to about 19 MB without adding anything a generator can use.
 Do not hand-edit anything under `lib/gleanex/client`, `lib/gleanex/indexing`,
 `lib/gleanex/platform` or `lib/gleanex/admin`. Naming and rendering are steered
 from `config/config.exs` and the plugin in `dev/gleanex/generator/processor.ex`.
+
+### Integration tests
+
+The suite runs against stubs, which prove the library does what Gleanex expects
+of it, not that this is what Glean expects. A wrong path prefix or a field name
+that no longer matches the description would pass every stubbed test.
+
+A separate read-only smoke test covers that, against a real deployment. It is
+excluded unless asked for:
+
+```sh
+GLEAN_INSTANCE=mycompany GLEAN_API_TOKEN=... mix test --include integration
+```
+
+It only reads, and only through the Client API. The Indexing API writes to a
+real search index, and a bulk upload replaces the previous batch, so it is left
+to the stubbed tests rather than pointed at a live deployment.
 
 ## Licence
 

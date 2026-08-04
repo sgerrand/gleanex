@@ -1,20 +1,5 @@
 name: Release
 
-# release-please keeps a pull request open that collects every Conventional
-# Commit landed on main. Merging it bumps the version in mix.exs, rewrites
-# CHANGELOG.md, tags the commit and cuts the GitHub release.
-#
-# Cutting the release triggers publish.yml, which runs mix hex.publish. A Hex
-# version can never be reused or withdrawn, only deprecated, so merging the
-# release pull request is the point of no return.
-#
-# Run through release-mate, which mints a short-lived GitHub App token rather
-# than using a long-lived personal access token. The reusable workflow declares
-# permissions: {} itself, so the default GITHUB_TOKEN is stripped and only the
-# minted token, which expires after about an hour, is in scope.
-#
-# Needs RELEASE_MATE_CLIENT_ID and RELEASE_MATE_PRIVATE_KEY as organization
-# secrets, and the Release Mate GitHub App installed on this repository.
 on:
   push:
     branches: [main]
@@ -22,7 +7,8 @@ on:
 permissions: {}
 
 jobs:
-  release:
+  release-mate:
+    name: Release Mate
     uses: release-mate/action/.github/workflows/release-please.yml@ab5434d252b3c7e7fd57abe6a2e611f04c25213b # v1.2.0
     secrets:
       client-id: ${{ secrets.RELEASE_MATE_CLIENT_ID }}

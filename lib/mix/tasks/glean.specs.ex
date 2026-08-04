@@ -23,6 +23,13 @@ defmodule Mix.Tasks.Glean.Specs do
     * `--ref` - branch, tag or commit to download. Defaults to `main`.
     * `--force` - overwrite local edits without asking.
 
+  ## Authentication
+
+  Resolving the ref goes through GitHub's API, which allows 60 calls an hour
+  per IP address without a token. Hosted CI runners share addresses, so that
+  allowance is usually already spent and GitHub answers 403. Set `GITHUB_TOKEN`
+  (or `GH_TOKEN`) and the call is authenticated instead, which raises the limit
+  to 1,000 an hour. Any token with read access works; the repository is public.
   """
 
   use Mix.Task
@@ -70,16 +77,39 @@ defmodule Mix.Tasks.Glean.Specs do
 
   defp resolve_ref(ref) do
     case Req.get("https://api.github.com/repos/#{@repo}/commits/#{ref}",
-           headers: [{"accept", "application/vnd.github.sha"}]
+           headers: [{"accept", "application/vnd.github.sha"} | auth_header()]
          ) do
       {:ok, %{status: 200, body: sha}} when is_binary(sha) ->
         String.trim(sha)
 
-      {:ok, %{status: status}} ->
-        Mix.raise("could not resolve ref #{inspect(ref)} in #{@repo} (HTTP #{status})")
+      {:ok, %{status: status} = response} ->
+        Mix.raise(
+          "could not resolve ref #{inspect(ref)} in #{@repo} " <>
+            "(HTTP #{status})#{rate_limit_note(response)}"
+        )
 
       {:error, exception} ->
         Mix.raise("could not reach GitHub: #{Exception.message(exception)}")
+    end
+  end
+
+  defp auth_header do
+    case System.get_env("GITHUB_TOKEN") || System.get_env("GH_TOKEN") do
+      token when is_binary(token) and token != "" -> [{"authorization", "Bearer #{token}"}]
+      _ -> []
+    end
+  end
+
+  # A spent rate limit is the usual reason for a 403 here, and GitHub says so
+  # only in a header, so the message would otherwise send someone looking for a
+  # ref that exists.
+  defp rate_limit_note(response) do
+    case Req.Response.get_header(response, "x-ratelimit-remaining") do
+      ["0" | _] ->
+        ". GitHub's rate limit for this address is spent; set GITHUB_TOKEN to raise it"
+
+      _ ->
+        ""
     end
   end
 

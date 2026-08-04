@@ -19,6 +19,10 @@ defmodule Mix.Tasks.Glean.SpecsTest do
     previous_shell = Mix.shell()
     previous_req = Req.default_options()
     original = File.cwd!()
+    # Whoever runs the suite may have either of these set, and the task reads
+    # them, so the tests that care about the header start from neither.
+    previous_env = Enum.map(~w(GITHUB_TOKEN GH_TOKEN), &{&1, System.get_env(&1)})
+    Enum.each(previous_env, fn {name, _} -> System.delete_env(name) end)
 
     Mix.shell(Mix.Shell.Process)
     # retry: false because the failure tests would otherwise spend Req's default
@@ -31,6 +35,11 @@ defmodule Mix.Tasks.Glean.SpecsTest do
       File.cd!(original)
       Mix.shell(previous_shell)
       Req.default_options(previous_req)
+
+      Enum.each(previous_env, fn
+        {name, nil} -> System.delete_env(name)
+        {name, value} -> System.put_env(name, value)
+      end)
     end)
 
     :ok
@@ -41,9 +50,12 @@ defmodule Mix.Tasks.Glean.SpecsTest do
   defp stub_github(opts \\ []) do
     sha = Keyword.get(opts, :sha, @sha)
     body = Keyword.get(opts, :body, fn _spec -> "openapi: 3.0.0\ninfo:\n  version: 0.9.0\n" end)
+    test = self()
 
     Req.Test.stub(GleanSpecsStub, fn conn ->
       if conn.request_path =~ ~r{/repos/gleanwork/open-api/commits/} do
+        send(test, {:ref_headers, conn.req_headers})
+
         conn
         |> Plug.Conn.put_resp_content_type("text/plain")
         |> Plug.Conn.send_resp(200, sha)
@@ -183,6 +195,63 @@ defmodule Mix.Tasks.Glean.SpecsTest do
     end
   end
 
+  describe "resolving the ref" do
+    @tag :tmp_dir
+    test "authenticates with GITHUB_TOKEN when it is set" do
+      System.put_env("GITHUB_TOKEN", "ghp_from_github_token")
+      stub_github()
+
+      Specs.run([])
+
+      assert_received {:ref_headers, headers}
+      assert {"authorization", "Bearer ghp_from_github_token"} in headers
+    end
+
+    @tag :tmp_dir
+    test "falls back to GH_TOKEN, which the gh CLI sets" do
+      System.put_env("GH_TOKEN", "ghp_from_gh_token")
+      stub_github()
+
+      Specs.run([])
+
+      assert_received {:ref_headers, headers}
+      assert {"authorization", "Bearer ghp_from_gh_token"} in headers
+    end
+
+    @tag :tmp_dir
+    test "prefers GITHUB_TOKEN when both are set" do
+      System.put_env("GITHUB_TOKEN", "ghp_from_github_token")
+      System.put_env("GH_TOKEN", "ghp_from_gh_token")
+      stub_github()
+
+      Specs.run([])
+
+      assert_received {:ref_headers, headers}
+      assert {"authorization", "Bearer ghp_from_github_token"} in headers
+    end
+
+    @tag :tmp_dir
+    test "sends no authorization when neither is set" do
+      stub_github()
+
+      Specs.run([])
+
+      assert_received {:ref_headers, headers}
+      refute List.keymember?(headers, "authorization", 0)
+    end
+
+    @tag :tmp_dir
+    test "ignores an empty token rather than sending an empty header" do
+      System.put_env("GITHUB_TOKEN", "")
+      stub_github()
+
+      Specs.run([])
+
+      assert_received {:ref_headers, headers}
+      refute List.keymember?(headers, "authorization", 0)
+    end
+  end
+
   describe "failures" do
     @tag :tmp_dir
     test "explains an unresolvable ref" do
@@ -191,6 +260,36 @@ defmodule Mix.Tasks.Glean.SpecsTest do
       assert_raise Mix.Error, ~r/could not resolve ref "nope".*HTTP 404/s, fn ->
         Specs.run(["--ref", "nope"])
       end
+    end
+
+    @tag :tmp_dir
+    test "points at the rate limit when GitHub says it is spent" do
+      Req.Test.stub(GleanSpecsStub, fn conn ->
+        conn
+        |> Plug.Conn.put_resp_header("x-ratelimit-remaining", "0")
+        |> Plug.Conn.send_resp(403, "API rate limit exceeded")
+      end)
+
+      assert_raise Mix.Error, ~r/HTTP 403\).*rate limit.*GITHUB_TOKEN/s, fn ->
+        Specs.run([])
+      end
+    end
+
+    @tag :tmp_dir
+    test "does not blame the rate limit when calls are still left" do
+      Req.Test.stub(GleanSpecsStub, fn conn ->
+        conn
+        |> Plug.Conn.put_resp_header("x-ratelimit-remaining", "57")
+        |> Plug.Conn.send_resp(403, "Forbidden")
+      end)
+
+      message =
+        assert_raise Mix.Error, fn ->
+          Specs.run([])
+        end
+
+      assert message.message =~ "HTTP 403)"
+      refute message.message =~ "rate limit"
     end
 
     @tag :tmp_dir

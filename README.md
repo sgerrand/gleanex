@@ -213,12 +213,11 @@ Which commits appear in the changelog follows `release-please-config.json`:
 hidden. `bump-minor-pre-major` keeps breaking changes inside `0.x` rather than
 jumping to `1.0.0`.
 
-Publishing to Hex stays manual, on purpose. A Hex version can never be reused or
-withdrawn, only deprecated, so the irreversible step is left to a person:
+Cutting the GitHub release triggers `.github/workflows/publish.yml`, which runs
+`mix hex.publish --yes`. It needs a `HEX_API_KEY` secret.
 
-```sh
-mix hex.publish
-```
+That makes merging the release pull request the point of no return: a Hex
+version can never be reused or withdrawn, only deprecated.
 
 ## Licence
 

@@ -4,10 +4,9 @@ name: Release
 # Commit landed on main. Merging it bumps the version in mix.exs, rewrites
 # CHANGELOG.md, tags the commit and cuts the GitHub release.
 #
-# Publishing to Hex is deliberately not automated. A Hex version can never be
-# reused or withdrawn, only deprecated, so the last step stays manual:
-#
-#     mix hex.publish
+# Cutting the release triggers publish.yml, which runs mix hex.publish. A Hex
+# version can never be reused or withdrawn, only deprecated, so merging the
+# release pull request is the point of no return.
 #
 # Run through release-mate, which mints a short-lived GitHub App token rather
 # than using a long-lived personal access token. The reusable workflow declares

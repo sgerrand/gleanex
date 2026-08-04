@@ -141,8 +141,13 @@ A scheduled workflow checks upstream weekly. It gates its pull request on the
 
 Commit messages must follow Conventional Commits — release-please parses them to
 decide version bumps and build the changelog, so the type prefix is functional,
-not stylistic. `CHANGELOG.md` is generated; do not hand-edit it. Publishing to
-Hex stays manual.
+not stylistic. `CHANGELOG.md` is generated; do not hand-edit it.
+
+Releasing is fully automated and ends in an irreversible step. Merging the
+release pull request tags the commit and cuts the GitHub release, which triggers
+`.github/workflows/publish.yml` and runs `mix hex.publish --yes`. A Hex version
+can never be reused or withdrawn, only deprecated, so treat merging that pull
+request as the point of no return.
 
 ## Known false positives
 

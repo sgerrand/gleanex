@@ -5,7 +5,9 @@
 First release.
 
 - Generated coverage of all four Glean APIs: Client, Indexing, Platform and
-  Admin, from `gleanwork/open-api` at commit `2c18b1b`.
+  Admin, from `gleanwork/open-api`. `priv/openapi/.api-version` records the
+  exact upstream commit the shipped code was generated from, and is updated
+  whenever the descriptions are.
 - `Gleanex.Config` with per-scope tokens, domain templating and per-API path
   prefixes. Client and Indexing token mix-ups fail before a request is sent.
 - `Gleanex.HTTP` transport on Req, with bearer auth, JSON and multipart bodies,

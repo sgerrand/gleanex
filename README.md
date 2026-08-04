@@ -199,8 +199,8 @@ to the stubbed tests rather than pointed at a live deployment.
 ### Releasing
 
 Releases are driven by [release-please](https://github.com/googleapis/release-please),
-run through [release-mate](https://github.com/release-mate/action) so it uses a
-short-lived GitHub App token rather than a personal access token.
+run through [release-mate](https://github.com/release-mate/action) with a
+short-lived GitHub App token.
 
 Every Conventional Commit landed on `main` is collected into a release pull
 request that stays open and updates itself. Merging it does four things: bumps
@@ -219,10 +219,6 @@ withdrawn, only deprecated, so the irreversible step is left to a person:
 ```sh
 mix hex.publish
 ```
-
-Setup this needs, once: the Release Mate GitHub App installed on the repository,
-and `RELEASE_MATE_CLIENT_ID` and `RELEASE_MATE_PRIVATE_KEY` set as organization
-secrets.
 
 ## Licence
 

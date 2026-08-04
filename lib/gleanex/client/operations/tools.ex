@@ -147,6 +147,48 @@ defmodule Gleanex.Client.Tools do
   end
 
   @doc """
+  Get tool definitions from a tool server.
+
+  Returns the name, description and JSON input schema for the named tools on the
+  specified tool server. Works for both action packs and MCP servers.
+
+  `toolNames` is required. Names that do not exist on the server are returned in
+  `notFound` rather than failing the request, so a single bad name does not force
+  callers into one-at-a-time retries. Matching is case-insensitive and treats `-`
+  and `_` as equivalent.
+
+  Native tools are not served; `serverId=native` returns 404.
+
+  ## Options
+
+    * `toolNames`: Tool names to look up on this server. Maximum 100.
+
+  """
+  @spec get_tool_server_tools(serverId :: String.t(), opts :: keyword) ::
+          {:ok, Gleanex.Client.ToolDefinitionsResponse.t()} | {:error, Gleanex.Error.t()}
+  def get_tool_server_tools(serverId, opts \\ []) do
+    client = opts[:client] || @default_client
+    query = Keyword.take(opts, [:toolNames])
+
+    client.request(%{
+      args: [serverId: serverId],
+      call: {Gleanex.Client.Tools, :get_tool_server_tools},
+      url: "/tool-servers/#{serverId}/tools",
+      method: :get,
+      query: query,
+      response: [
+        {200, {Gleanex.Client.ToolDefinitionsResponse, :t}},
+        {400, :null},
+        {401, :null},
+        {404, :null},
+        {429, :null},
+        {503, :null}
+      ],
+      opts: opts
+    })
+  end
+
+  @doc """
   Execute the specified tool
 
   Execute the specified tool with provided parameters

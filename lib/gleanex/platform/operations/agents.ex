@@ -40,6 +40,7 @@ defmodule Gleanex.Platform.Agents do
         {408, {Gleanex.Platform.ProblemDetail, :t}},
         {409, {Gleanex.Platform.ProblemDetail, :t}},
         {413, {Gleanex.Platform.ProblemDetail, :t}},
+        {422, {Gleanex.Platform.UnauthorizedAgentToolsProblem, :t}},
         {429, {Gleanex.Platform.ProblemDetail, :t}},
         {500, {Gleanex.Platform.ProblemDetail, :t}},
         {503, {Gleanex.Platform.ProblemDetail, :t}}

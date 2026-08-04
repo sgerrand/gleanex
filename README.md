@@ -196,6 +196,34 @@ It only reads, and only through the Client API. The Indexing API writes to a
 real search index, and a bulk upload replaces the previous batch, so it is left
 to the stubbed tests rather than pointed at a live deployment.
 
+### Releasing
+
+Releases are driven by [release-please](https://github.com/googleapis/release-please),
+run through [release-mate](https://github.com/release-mate/action) so it uses a
+short-lived GitHub App token rather than a personal access token.
+
+Every Conventional Commit landed on `main` is collected into a release pull
+request that stays open and updates itself. Merging it does four things: bumps
+`@version` in `mix.exs`, rewrites `CHANGELOG.md`, tags the commit `vX.Y.Z` and
+cuts the GitHub release. Nothing to run by hand, and no version to remember to
+bump.
+
+Which commits appear in the changelog follows `release-please-config.json`:
+`feat`, `fix`, `perf` and `revert` are listed, everything else is recorded but
+hidden. `bump-minor-pre-major` keeps breaking changes inside `0.x` rather than
+jumping to `1.0.0`.
+
+Publishing to Hex stays manual, on purpose. A Hex version can never be reused or
+withdrawn, only deprecated, so the irreversible step is left to a person:
+
+```sh
+mix hex.publish
+```
+
+Setup this needs, once: the Release Mate GitHub App installed on the repository,
+and `RELEASE_MATE_CLIENT_ID` and `RELEASE_MATE_PRIVATE_KEY` set as organization
+secrets.
+
 ## Licence
 
 BSD 2-Clause. Gleanex is not affiliated with or endorsed by Glean.

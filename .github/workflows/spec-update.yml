@@ -60,7 +60,12 @@ jobs:
         id: before
         run: echo "commit=$(grep '^commit:' priv/openapi/.api-version | cut -d' ' -f2)" >> "$GITHUB_OUTPUT"
 
+      # The token is only for resolving the ref through GitHub's API. Without
+      # one that call is limited to 60 an hour per IP address, which hosted
+      # runners share, so it answers 403 rather than a commit.
       - name: Download the latest descriptions
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: mix glean.specs --force --ref "${{ inputs.ref || 'main' }}"
 
       - name: Has anything changed?

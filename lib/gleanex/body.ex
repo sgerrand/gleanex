@@ -41,8 +41,10 @@ defmodule Gleanex.Body do
     else
       value
       |> Map.from_struct()
-      |> Enum.reject(fn {_key, field} -> is_nil(field) end)
-      |> Map.new(fn {key, field} -> {key, encode(field)} end)
+      |> Enum.reduce(%{}, fn
+        {_key, nil}, acc -> acc
+        {key, field}, acc -> Map.put(acc, key, encode(field))
+      end)
     end
   end
 

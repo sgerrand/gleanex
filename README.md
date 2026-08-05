@@ -211,7 +211,8 @@ bump.
 Which commits appear in the changelog follows `release-please-config.json`:
 `feat`, `fix`, `perf` and `revert` are listed, everything else is recorded but
 hidden. `bump-minor-pre-major` keeps breaking changes inside `0.x` rather than
-jumping to `1.0.0`.
+jumping to `1.0.0`, and `initial-version` makes the very first release `0.1.0`
+rather than release-please's default of `1.0.0`.
 
 Cutting the GitHub release triggers `.github/workflows/publish.yml`, which runs
 `mix hex.publish --yes`. It needs a `HEX_API_KEY` secret.

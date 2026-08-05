@@ -85,8 +85,9 @@ defmodule Gleanex.MixProject do
       main: "readme",
       extras: ["README.md", "CHANGELOG.md"],
       source_ref: "v#{@version}",
-      # Dev-only build tooling, not part of the published surface.
-      ignore_modules: [Gleanex.Generator.Processor],
+      # Dev-only build tooling, and the chunk reassembly shared by Gleanex.SSE
+      # and Gleanex.NDJSON. Neither is part of the published surface.
+      ignore_modules: [Gleanex.Generator.Processor, Gleanex.Framing],
       groups_for_modules: [
         Core: [
           Gleanex,

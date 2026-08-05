@@ -19,6 +19,9 @@ defmodule Gleanex.NDJSON do
   """
 
   alias Gleanex.Error
+  alias Gleanex.Framing
+
+  @separators ["\r\n", "\n"]
 
   @doc """
   Turn a stream of binary chunks into a stream of decoded terms.
@@ -29,29 +32,16 @@ defmodule Gleanex.NDJSON do
   """
   @spec decode(Enumerable.t()) :: Enumerable.t()
   def decode(chunks) do
-    Stream.transform(
-      chunks,
-      fn -> "" end,
-      &take_lines/2,
-      &flush/1,
-      fn _buffer -> :ok end
-    )
+    Framing.stream(chunks, @separators, &decode_line/1)
   end
-
-  defp take_lines(chunk, buffer) do
-    parts = String.split(buffer <> chunk, ~r/\r?\n/)
-    {complete, [remainder]} = Enum.split(parts, -1)
-
-    {complete |> Enum.reject(&blank?/1) |> Enum.map(&decode_line/1), remainder}
-  end
-
-  defp flush(buffer) do
-    if blank?(buffer), do: {[], buffer}, else: {[decode_line(buffer)], buffer}
-  end
-
-  defp blank?(line), do: String.trim(line) == ""
 
   defp decode_line(line) do
+    if blank?(line), do: [], else: [decode_json(line)]
+  end
+
+  defp blank?(line), do: String.trim_leading(line) == ""
+
+  defp decode_json(line) do
     case JSON.decode(line) do
       {:ok, decoded} ->
         decoded

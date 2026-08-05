@@ -18,6 +18,13 @@ defmodule Gleanex.SSE do
 
   """
 
+  alias Gleanex.Framing
+
+  # Both forms of line ending, and every mix of them across the blank line that
+  # separates two events.
+  @line_separators ["\r\n", "\n"]
+  @event_separators ["\r\n\r\n", "\r\n\n", "\n\r\n", "\n\n"]
+
   defmodule Event do
     @moduledoc """
     One server-sent event.
@@ -45,13 +52,7 @@ defmodule Gleanex.SSE do
   """
   @spec decode(Enumerable.t()) :: Enumerable.t()
   def decode(chunks) do
-    Stream.transform(
-      chunks,
-      fn -> "" end,
-      &take_events/2,
-      &flush/1,
-      fn _buffer -> :ok end
-    )
+    Framing.stream(chunks, @event_separators, &parse/1)
   end
 
   @doc """
@@ -80,57 +81,39 @@ defmodule Gleanex.SSE do
     end
   end
 
-  defp take_events(chunk, buffer) do
-    parts = String.split(buffer <> chunk, ~r/\r?\n\r?\n/)
-    {complete, [remainder]} = Enum.split(parts, -1)
-
-    {complete |> Enum.map(&parse/1) |> Enum.reject(&is_nil/1), remainder}
-  end
-
-  defp flush(buffer) do
-    case parse(buffer) do
-      nil -> {[], buffer}
-      event -> {[event], buffer}
-    end
-  end
+  # `data` is accumulated in reverse while parsing, so an event that collected
+  # nothing at all is exactly the starting value and needs no separate
+  # emptiness check.
+  defp blank, do: %Event{data: []}
 
   defp parse(block) do
-    fields =
+    event =
       block
-      |> String.split(~r/\r?\n/)
-      |> Enum.reduce(%{data: []}, &parse_line/2)
+      |> :binary.split(@line_separators, [:global])
+      |> Enum.reduce(blank(), &parse_line/2)
 
-    if empty?(fields) do
-      nil
-    else
-      %Event{
-        id: fields[:id],
-        event: fields[:event],
-        data: join_data(fields.data),
-        retry: fields[:retry]
-      }
-    end
+    if event == blank(), do: [], else: [%{event | data: join_data(event.data)}]
   end
 
   # A line beginning with a colon is a comment, and is ignored. So is a line
   # with no colon at all, which the specification treats as a field with an
   # empty value; Glean does not send those.
-  defp parse_line(":" <> _comment, fields), do: fields
+  defp parse_line(":" <> _comment, event), do: event
 
-  defp parse_line(line, fields) do
+  defp parse_line(line, event) do
     case String.split(line, ":", parts: 2) do
-      ["data", value] -> Map.update!(fields, :data, &[strip(value) | &1])
-      ["id", value] -> Map.put(fields, :id, strip(value))
-      ["event", value] -> Map.put(fields, :event, strip(value))
-      ["retry", value] -> put_retry(fields, strip(value))
-      _ -> fields
+      ["data", value] -> %{event | data: [strip(value) | event.data]}
+      ["id", value] -> %{event | id: strip(value)}
+      ["event", value] -> %{event | event: strip(value)}
+      ["retry", value] -> put_retry(event, strip(value))
+      _ -> event
     end
   end
 
-  defp put_retry(fields, value) do
+  defp put_retry(event, value) do
     case Integer.parse(value) do
-      {milliseconds, ""} -> Map.put(fields, :retry, milliseconds)
-      _ -> fields
+      {milliseconds, ""} -> %{event | retry: milliseconds}
+      _ -> event
     end
   end
 
@@ -140,9 +123,4 @@ defmodule Gleanex.SSE do
 
   defp join_data([]), do: nil
   defp join_data(lines), do: lines |> Enum.reverse() |> Enum.join("\n")
-
-  defp empty?(fields) do
-    fields.data == [] and is_nil(fields[:id]) and is_nil(fields[:event]) and
-      is_nil(fields[:retry])
-  end
 end

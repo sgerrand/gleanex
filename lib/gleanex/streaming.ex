@@ -60,15 +60,7 @@ defmodule Gleanex.Streaming do
   """
   @spec chat(Config.t(), map, keyword) :: {:ok, stream} | {:error, Error.t()}
   def chat(%Config{} = config, body, opts \\ []) do
-    operation = %{
-      call: {__MODULE__, :chat},
-      url: "/chat",
-      method: :post,
-      body: Map.merge(%{stream: true}, body),
-      request: [{"application/json", :map}],
-      opts: opts
-    }
-
+    operation = operation(:chat, "/chat", Map.merge(%{stream: true}, body), opts)
     start(config, :client, operation, &NDJSON.decode/1)
   end
 
@@ -80,15 +72,7 @@ defmodule Gleanex.Streaming do
   """
   @spec agent_run(Config.t(), map, keyword) :: {:ok, stream} | {:error, Error.t()}
   def agent_run(%Config{} = config, body, opts \\ []) do
-    operation = %{
-      call: {__MODULE__, :agent_run},
-      url: "/agents/runs/stream",
-      method: :post,
-      body: body,
-      request: [{"application/json", :map}],
-      opts: opts
-    }
-
+    operation = operation(:agent_run, "/agents/runs/stream", body, opts)
     start(config, :client, operation, &SSE.decode/1)
   end
 
@@ -101,16 +85,22 @@ defmodule Gleanex.Streaming do
   @spec platform_agent_run(Config.t(), String.t(), map, keyword) ::
           {:ok, stream} | {:error, Error.t()}
   def platform_agent_run(%Config{} = config, agent_id, body, opts \\ []) do
-    operation = %{
-      call: {__MODULE__, :platform_agent_run},
-      url: "/agents/#{agent_id}/runs",
+    body = Map.merge(%{stream: true}, body)
+    operation = operation(:platform_agent_run, "/agents/#{agent_id}/runs", body, opts)
+    start(config, :platform, operation, &SSE.decode/1)
+  end
+
+  # The same shape `Gleanex.HTTP.request/1` takes from generated operations.
+  # These endpoints are all JSON posts, so only the name, path and body differ.
+  defp operation(name, url, body, opts) do
+    %{
+      call: {__MODULE__, name},
+      url: url,
       method: :post,
-      body: Map.merge(%{stream: true}, body),
+      body: body,
       request: [{"application/json", :map}],
       opts: opts
     }
-
-    start(config, :platform, operation, &SSE.decode/1)
   end
 
   defp start(config, api, operation, decoder) do

@@ -36,13 +36,13 @@ defmodule Gleanex.ProblemDetail do
   def parse(body) when is_map(body) do
     if problem?(body) do
       %__MODULE__{
-        type: get(body, "type"),
-        title: get(body, "title"),
-        status: get(body, "status"),
-        detail: get(body, "detail"),
-        instance: get(body, "instance"),
-        code: get(body, "code"),
-        errors: parse_errors(get(body, "errors")),
+        type: Map.get(body, "type"),
+        title: Map.get(body, "title"),
+        status: Map.get(body, "status"),
+        detail: Map.get(body, "detail"),
+        instance: Map.get(body, "instance"),
+        code: Map.get(body, "code"),
+        errors: parse_errors(Map.get(body, "errors")),
         raw: body
       }
     end
@@ -78,8 +78,6 @@ defmodule Gleanex.ProblemDetail do
   end
 
   defp parse_errors(_), do: []
-
-  defp get(body, key), do: Map.get(body, key)
 
   # Only ever called on keys that came from Glean's own error payloads, which is
   # a bounded set; still uses the safe variant to keep the atom table finite.

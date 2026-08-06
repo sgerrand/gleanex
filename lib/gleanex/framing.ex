@@ -16,6 +16,9 @@ defmodule Gleanex.Framing do
 
   `parse` returns a list, so a block can decode to one element or to none.
   Separators match leftmost-longest, so `["\\r\\n", "\\n"]` prefers CRLF.
+
+  A stream that ends on a separator leaves nothing behind, and `parse` is not
+  called for that empty remainder.
   """
   @spec stream(Enumerable.t(), [binary], (binary -> [term])) :: Enumerable.t()
   def stream(chunks, separators, parse) do
@@ -28,7 +31,10 @@ defmodule Gleanex.Framing do
 
         {Enum.flat_map(complete, parse), remainder}
       end,
-      fn buffer -> {parse.(buffer), buffer} end,
+      fn
+        "" -> {[], ""}
+        buffer -> {parse.(buffer), buffer}
+      end,
       fn _buffer -> :ok end
     )
   end

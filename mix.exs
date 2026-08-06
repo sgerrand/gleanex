@@ -8,7 +8,10 @@ defmodule Gleanex.MixProject do
     [
       app: :gleanex,
       version: @version,
-      elixir: "~> 1.20",
+      # 1.18 is the floor because the JSON module arrived there, and
+      # Gleanex.Body, Gleanex.NDJSON, Gleanex.SSE and Gleanex.Streaming use it.
+      # CI runs the test suite against every minor from here up.
+      elixir: "~> 1.18",
       start_permanent: Mix.env() == :prod,
       elixirc_paths: elixirc_paths(Mix.env()),
       deps: deps(),

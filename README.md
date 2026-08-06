@@ -15,6 +15,8 @@ def deps do
 end
 ```
 
+Needs Elixir 1.18 or later.
+
 ## Use it
 
 ```elixir

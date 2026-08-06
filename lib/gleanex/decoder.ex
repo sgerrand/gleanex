@@ -94,7 +94,8 @@ defmodule Gleanex.Decoder do
   # every other part of decoding put together on payloads carrying fields the
   # vendored description does not have.
   defp overlap({module, type}, payload) do
-    known = module.__fields__(type) |> Keyword.keys() |> MapSet.new(&Atom.to_string/1)
+    known =
+      module.__fields__(type) |> Keyword.keys() |> Enum.map(&Atom.to_string/1) |> MapSet.new()
 
     payload
     |> Map.keys()

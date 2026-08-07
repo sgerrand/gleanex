@@ -140,7 +140,7 @@ defmodule Gleanex.Error do
   defp detail_suffix(problem), do: ": " <> ProblemDetail.message(problem)
 
   defp describe(nil), do: ""
-  defp describe({module, function}), do: "#{inspect(module)}.#{function}/n: "
+  defp describe({module, function}), do: "#{inspect(module)}.#{function}: "
 
   defp retry_after(%Req.Response{} = response) do
     response

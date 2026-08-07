@@ -96,7 +96,8 @@ defmodule Gleanex.ErrorTest do
     test "names the operation when it is given" do
       error = Error.from_response(response(500, ""), {Gleanex.Client.Search, :search})
 
-      assert Exception.message(error) =~ "Gleanex.Client.Search.search"
+      assert Exception.message(error) ==
+               "Gleanex.Client.Search.search: Glean returned HTTP 500"
     end
 
     test "omits the operation when it is not" do
@@ -119,8 +120,7 @@ defmodule Gleanex.ErrorTest do
     test "works without an operation" do
       error = Error.from_exception(%Req.TransportError{reason: :timeout})
 
-      assert Exception.message(error) =~ "failed to reach Glean"
-      refute Exception.message(error) =~ "/n:"
+      assert String.starts_with?(Exception.message(error), "failed to reach Glean")
     end
   end
 end

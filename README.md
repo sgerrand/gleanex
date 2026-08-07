@@ -147,6 +147,10 @@ for event <- events do
 end
 ```
 
+The response is delivered to the process that made the request, so consume the
+stream in that same process, and only once. Consuming it elsewhere raises
+straight away rather than waiting for chunks that cannot arrive.
+
 ## Bulk indexing
 
 Bulk uploads are paged, and Glean only swaps in the new batch once it has seen

@@ -134,4 +134,31 @@ defmodule Gleanex.StreamingTest do
       assert message =~ "holds an indexing token"
     end
   end
+
+  describe "stream ownership" do
+    test "consuming from another process raises instead of waiting", %{config: config} do
+      Req.Test.stub(GleanexStreamStub, fn conn -> chunked(conn, [~s({"a":1}\n)]) end)
+
+      assert {:ok, stream} = Streaming.chat(config, %{messages: []})
+
+      task =
+        Task.async(fn ->
+          try do
+            {:ok, Enum.to_list(stream)}
+          rescue
+            error in Error -> {:raised, error}
+          end
+        end)
+
+      assert {:raised, %Error{reason: :usage, message: message}} = Task.await(task)
+      assert message =~ "has to be consumed there"
+    end
+
+    test "consuming in the owning process is unaffected", %{config: config} do
+      Req.Test.stub(GleanexStreamStub, fn conn -> chunked(conn, [~s({"a":1}\n)]) end)
+
+      assert {:ok, stream} = Streaming.chat(config, %{messages: []})
+      assert Enum.to_list(stream) == [%{"a" => 1}]
+    end
+  end
 end

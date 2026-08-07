@@ -15,7 +15,9 @@ defmodule Gleanex.Streaming do
   ## Consuming a stream
 
   The response is delivered to the process that made the request, so the stream
-  must be consumed in that same process, and only once.
+  must be consumed in that same process, and only once. Consuming it anywhere
+  else raises a `Gleanex.Error` with reason `:usage` as soon as enumeration
+  starts, rather than waiting for chunks that cannot arrive.
 
   ## Examples
 
@@ -133,7 +135,7 @@ defmodule Gleanex.Streaming do
 
   defp handle({:ok, %Req.Response{status: status, body: body}}, decoder, _call)
        when status in 200..299 do
-    {:ok, decoder.(body)}
+    {:ok, body |> decoder.() |> owned_by(self())}
   end
 
   defp handle({:ok, %Req.Response{} = response}, _decoder, call) do
@@ -142,6 +144,33 @@ defmodule Gleanex.Streaming do
 
   defp handle({:error, exception}, _decoder, call) do
     {:error, Error.from_exception(exception, call)}
+  end
+
+  # `into: :self` sends the body to the process that made the request, as
+  # messages only that process can receive. Enumerating anywhere else waits for
+  # chunks that will never arrive and then fails on the receive timeout, a long
+  # way from the mistake. Checking the process when enumeration starts turns
+  # that into an immediate, readable error.
+  defp owned_by(stream, owner) do
+    Stream.transform(
+      stream,
+      fn -> check_owner!(owner) end,
+      fn element, state -> {[element], state} end,
+      fn _state -> :ok end
+    )
+  end
+
+  defp check_owner!(owner) do
+    if self() != owner do
+      raise Error.usage(
+              "this stream belongs to #{inspect(owner)} and has to be consumed there, but " <>
+                "#{inspect(self())} is consuming it. The response is delivered as messages to " <>
+                "the process that made the request, so the stream cannot be handed to another " <>
+                "process. Make the request in the process that will consume it."
+            )
+    end
+
+    :ok
   end
 
   # An unsuccessful response is streamed too, so its body has to be drained

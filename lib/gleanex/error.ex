@@ -15,6 +15,9 @@ defmodule Gleanex.Error do
     * `:problem_detail` - the response carried an RFC 7807 body, parsed into
       `problem`.
     * `:http` - any other unsuccessful status, with the decoded `body`.
+    * `:usage` - the library was driven in a way that cannot work, such as
+      consuming a stream from a process that did not make the request. Always
+      raised rather than returned: the call itself succeeded.
 
   ## Examples
 
@@ -29,7 +32,7 @@ defmodule Gleanex.Error do
 
   alias Gleanex.ProblemDetail
 
-  @type reason :: :config | :transport | :rate_limited | :problem_detail | :http
+  @type reason :: :config | :transport | :rate_limited | :problem_detail | :http | :usage
 
   @type t :: %__MODULE__{
           reason: reason,
@@ -62,6 +65,14 @@ defmodule Gleanex.Error do
   @spec config(String.t()) :: t
   def config(message) when is_binary(message) do
     %__MODULE__{reason: :config, message: message}
+  end
+
+  @doc """
+  A misuse of the library, caught before it turns into something confusing.
+  """
+  @spec usage(String.t()) :: t
+  def usage(message) when is_binary(message) do
+    %__MODULE__{reason: :usage, message: message}
   end
 
   @doc """

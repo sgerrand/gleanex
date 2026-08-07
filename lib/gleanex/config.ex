@@ -34,9 +34,17 @@ defmodule Gleanex.Config do
   is usually the email domain without the TLD. The four APIs then live under
   different path prefixes, which this module appends for you.
 
-  `:base_url` overrides the host root only — always give it scheme and host with
-  no path, for example `https://mycompany-be.glean.com`. The per-API prefix is
-  still appended.
+  `:base_url` overrides the host root only — give it scheme and host with no
+  path, for example `https://mycompany-be.glean.com`. The per-API prefix is
+  still appended, so anything else is rejected by `new/1` rather than left to
+  produce a URL that does not exist.
+
+  When the requests really do need a prefix of their own, as they do through a
+  proxy, pass it as a `Req` option instead. That replaces the whole base URL,
+  prefix included:
+
+      Gleanex.new(domain: "mycompany", token: token,
+        req_options: [base_url: "https://proxy.internal/glean/rest/api/v1"])
 
   ## The token is hidden from inspect
 
@@ -149,7 +157,33 @@ defmodule Gleanex.Config do
     raise Error.config("invalid :scope #{inspect(scope)}, expected one of #{inspect(@scopes)}")
   end
 
+  defp validate!(%__MODULE__{base_url: base_url} = config) when is_binary(base_url) do
+    if host_root?(base_url) do
+      config
+    else
+      raise Error.config(
+              "invalid :base_url #{inspect(base_url)}: give scheme and host only, for example " <>
+                "\"https://mycompany-be.glean.com\". Each API's path prefix is appended to it, " <>
+                "so a :base_url carrying a path of its own produces a URL that does not exist. " <>
+                "To send requests through something that does need a prefix, such as a proxy, " <>
+                "pass req_options: [base_url: ...] instead, which replaces the whole URL"
+            )
+    end
+  end
+
   defp validate!(%__MODULE__{} = config), do: config
+
+  # A trailing slash is already trimmed by the time this runs, so the path of a
+  # bare host is nil rather than "/".
+  defp host_root?(base_url) do
+    case URI.new(base_url) do
+      {:ok, %URI{scheme: scheme, host: host, path: path, query: nil, fragment: nil}} ->
+        scheme in ["http", "https"] and is_binary(host) and host != "" and path in [nil, ""]
+
+      _ ->
+        false
+    end
+  end
 
   @doc """
   Build a config from the application environment and system environment alone.

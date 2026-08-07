@@ -67,6 +67,45 @@ defmodule Gleanex.ConfigTest do
         Gleanex.new(domain: "acme", token: "secret", scope: :admin)
       end
     end
+
+    test "raises on a :base_url that is not a bare host root" do
+      for base_url <- [
+            "https://acme-be.glean.com/glean",
+            "https://acme-be.glean.com/rest/api/v1",
+            "https://acme-be.glean.com?a=1",
+            "https://acme-be.glean.com#frag",
+            "acme-be.glean.com",
+            "ftp://acme-be.glean.com",
+            "not a url"
+          ] do
+        assert_raise Error, ~r/invalid :base_url/, fn ->
+          Gleanex.new(base_url: base_url, token: "secret")
+        end
+      end
+    end
+
+    test "accepts a bare host root, with or without a port or trailing slash" do
+      for base_url <- [
+            "https://acme-be.glean.com",
+            "https://acme-be.glean.com/",
+            "http://localhost:4000"
+          ] do
+        assert %Config{} = Gleanex.new(base_url: base_url, token: "secret")
+      end
+    end
+
+    test "a proxy prefix goes in req_options, which replaces the whole base URL" do
+      config =
+        Gleanex.new(
+          domain: "acme",
+          token: "secret",
+          req_options: [base_url: "https://proxy.internal/glean/rest/api/v1"]
+        )
+
+      request = Gleanex.HTTP.build_request(config, :client, %{url: "/search"})
+
+      assert request.options[:base_url] == "https://proxy.internal/glean/rest/api/v1"
+    end
   end
 
   describe "settings from the application environment" do

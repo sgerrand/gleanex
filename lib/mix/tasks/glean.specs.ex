@@ -141,14 +141,10 @@ defmodule Mix.Tasks.Glean.Specs do
   # a couple of lines into the file, and this task should not need a parser just
   # to write a provenance note.
   defp spec_version(body) do
-    body
-    |> String.split("\n")
-    |> Enum.find_value("unknown", fn line ->
-      case Regex.run(~r/^\s{2}version:\s*["']?([^"'\s]+)/, line) do
-        [_, version] -> version
-        nil -> nil
-      end
-    end)
+    case Regex.run(~r/^[ \t]{2}version:[ \t]*["']?([^"'\s]+)/m, body) do
+      [_, version] -> version
+      nil -> "unknown"
+    end
   end
 
   defp write_version_file(sha, ref, versions) do

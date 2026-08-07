@@ -48,6 +48,14 @@ defmodule Gleanex.SSETest do
     assert [%Event{data: "real"}] = decode([": ping\n\ndata: real\n\n"])
   end
 
+  test "ignores unknown fields and lines with no colon" do
+    assert [%Event{data: "kept"}] = decode(["unknown: value\nbare\ndata: kept\n\n"])
+  end
+
+  test "skips blocks that hold nothing but unknown fields" do
+    assert [%Event{data: "real"}] = decode(["unknown: value\n\ndata: real\n\n"])
+  end
+
   test "handles carriage returns" do
     assert [%Event{id: "1", data: "windows"}] = decode(["id: 1\r\ndata: windows\r\n\r\n"])
   end

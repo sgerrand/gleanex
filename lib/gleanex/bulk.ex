@@ -95,18 +95,18 @@ defmodule Gleanex.Bulk do
     records
     |> Stream.chunk_every(page_size)
     |> Stream.concat([:end])
-    |> Stream.transform({nil, 0}, fn
-      :end, {nil, 0} ->
+    |> Stream.transform({nil, true}, fn
+      :end, {nil, true} ->
         {[{[], true, true}], :done}
 
-      :end, {previous, index} ->
-        {[{previous, index == 0, true}], :done}
+      :end, {previous, first?} ->
+        {[{previous, first?, true}], :done}
 
-      chunk, {nil, 0} ->
-        {[], {chunk, 0}}
+      chunk, {nil, first?} ->
+        {[], {chunk, first?}}
 
-      chunk, {previous, index} ->
-        {[{previous, index == 0, false}], {chunk, index + 1}}
+      chunk, {previous, first?} ->
+        {[{previous, first?, false}], {chunk, false}}
     end)
   end
 

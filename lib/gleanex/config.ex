@@ -155,7 +155,7 @@ defmodule Gleanex.Config do
   @spec base_url(t, api) :: String.t()
   def base_url(%__MODULE__{} = config, api) when api in @apis do
     host = config.base_url || "https://#{config.domain}-be.glean.com"
-    host <> Map.fetch!(@api_prefixes, api)
+    host <> prefix(api)
   end
 
   @doc """
@@ -178,20 +178,20 @@ defmodule Gleanex.Config do
   Indexing API.
   """
   @spec check_scope(t, api) :: :ok | {:error, Error.t()}
-  def check_scope(%__MODULE__{scope: :indexing}, :indexing), do: :ok
-
-  def check_scope(%__MODULE__{scope: scope}, api) when scope != :indexing and api != :indexing,
-    do: :ok
-
   def check_scope(%__MODULE__{scope: scope}, api) do
-    expected = expected_scope(api)
+    case expected_scope(api) do
+      ^scope ->
+        :ok
 
-    {:error,
-     Error.config(
-       "this config holds #{article(scope)} #{scope} token but the #{api} API needs " <>
-         "#{article(expected)} #{expected} token. Client and Indexing tokens are not " <>
-         "interchangeable; build a second config with Gleanex.new(scope: #{inspect(expected)}, ...)"
-     )}
+      expected ->
+        {:error,
+         Error.config(
+           "this config holds #{article(scope)} #{scope} token but the #{api} API needs " <>
+             "#{article(expected)} #{expected} token. Client and Indexing tokens are not " <>
+             "interchangeable; build a second config with " <>
+             "Gleanex.new(scope: #{inspect(expected)}, ...)"
+         )}
+    end
   end
 
   defp expected_scope(:indexing), do: :indexing

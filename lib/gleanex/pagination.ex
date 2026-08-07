@@ -58,17 +58,13 @@ defmodule Gleanex.Pagination do
       when is_function(operation, 2) and is_map(body) do
     opts = Keyword.put(opts, :config, config)
 
+    # The first page is `{:next, nil}`: no cursor to send, and `next_state/2`
+    # rules out a nil cursor before it compares one page's cursor to the last.
     Stream.resource(
-      fn -> {:first, nil} end,
+      fn -> {:next, nil} end,
       fn
-        :done ->
-          {:halt, :done}
-
-        {:first, _cursor} ->
-          request(operation, body, opts, nil)
-
-        {:next, cursor} ->
-          request(operation, body, opts, cursor)
+        :done -> {:halt, :done}
+        {:next, cursor} -> request(operation, body, opts, cursor)
       end,
       fn _state -> :ok end
     )

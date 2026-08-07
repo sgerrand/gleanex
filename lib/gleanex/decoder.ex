@@ -66,13 +66,16 @@ defmodule Gleanex.Decoder do
     end
   end
 
+  # Scored once and kept: `Enum.max_by/3` would otherwise have to be asked for
+  # the winner's score a second time, and scoring walks a whole field table.
   defp best_match(value, types) when is_map(value) do
     types
     |> Enum.filter(&struct_type?/1)
-    |> Enum.max_by(&overlap(&1, value), fn -> nil end)
+    |> Enum.map(&{overlap(&1, value), &1})
+    |> Enum.filter(fn {overlap, _type} -> overlap > 0 end)
     |> case do
-      nil -> nil
-      type -> if overlap(type, value) > 0, do: type, else: nil
+      [] -> nil
+      scored -> scored |> Enum.max_by(&elem(&1, 0)) |> elem(1)
     end
   end
 
@@ -85,20 +88,18 @@ defmodule Gleanex.Decoder do
   defp struct_type?({module, type}) when is_atom(module) and is_atom(type), do: schema?(module)
   defp struct_type?(_), do: false
 
+  # Compared as strings rather than atoms. A payload key that is not already an
+  # atom would have to be turned into one through `String.to_existing_atom/1`,
+  # and the rescue that guards it builds a stacktrace, which costs more than
+  # every other part of decoding put together on payloads carrying fields the
+  # vendored description does not have.
   defp overlap({module, type}, payload) do
-    known = module.__fields__(type) |> Keyword.keys() |> MapSet.new()
+    known =
+      module.__fields__(type) |> Keyword.keys() |> Enum.map(&Atom.to_string/1) |> MapSet.new()
 
     payload
     |> Map.keys()
-    |> Enum.count(fn key -> MapSet.member?(known, to_atom(key)) end)
-  end
-
-  defp to_atom(key) when is_atom(key), do: key
-
-  defp to_atom(key) when is_binary(key) do
-    String.to_existing_atom(key)
-  rescue
-    ArgumentError -> nil
+    |> Enum.count(fn key -> MapSet.member?(known, to_string(key)) end)
   end
 
   defp schema?(module) do

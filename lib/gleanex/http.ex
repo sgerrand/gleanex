@@ -47,7 +47,7 @@ defmodule Gleanex.HTTP do
 
     with {:ok, config} <- fetch_config(opts),
          :ok <- Config.check_scope(config, api) do
-      send_request(config, api, operation)
+      send_request(config, api, operation, call)
     end
   end
 
@@ -71,10 +71,9 @@ defmodule Gleanex.HTTP do
 
   def api_for(_), do: :client
 
-  defp to_api("indexing"), do: :indexing
-  defp to_api("platform"), do: :platform
-  defp to_api("admin"), do: :admin
-  defp to_api(_), do: :client
+  defp to_api(segment) do
+    Enum.find(Config.apis(), :client, &(Atom.to_string(&1) == segment))
+  end
 
   defp fetch_config(opts) do
     case Keyword.get(opts, :config) do
@@ -100,27 +99,7 @@ defmodule Gleanex.HTTP do
   add `into: :self` through `req_options`.
   """
   @spec build_request(Config.t(), Config.api(), map) :: Req.Request.t()
-  def build_request(config, api, operation), do: build(config, api, operation)
-
-  defp send_request(config, api, operation) do
-    call = Map.get(operation, :call)
-
-    metadata = %{
-      api: api,
-      operation: call,
-      method: Map.get(operation, :method, :get),
-      url: Map.get(operation, :url, "/")
-    }
-
-    :telemetry.span([:gleanex, :request], metadata, fn ->
-      response = config |> build(api, operation) |> Req.request()
-      result = handle(response, operation, call)
-
-      {result, Map.merge(metadata, result_metadata(response))}
-    end)
-  end
-
-  defp build(config, api, operation) do
+  def build_request(config, api, operation) do
     opts = Map.get(operation, :opts, [])
 
     [
@@ -138,6 +117,22 @@ defmodule Gleanex.HTTP do
     |> Keyword.merge(config.req_options)
     |> Keyword.merge(Keyword.get(opts, :req_options, []))
     |> Req.new()
+  end
+
+  defp send_request(config, api, operation, call) do
+    metadata = %{
+      api: api,
+      operation: call,
+      method: Map.get(operation, :method, :get),
+      url: Map.get(operation, :url, "/")
+    }
+
+    :telemetry.span([:gleanex, :request], metadata, fn ->
+      response = config |> build_request(api, operation) |> Req.request()
+      result = handle(response, operation, call)
+
+      {result, Map.merge(metadata, result_metadata(response))}
+    end)
   end
 
   defp add_query(req_opts, nil), do: req_opts
@@ -173,7 +168,7 @@ defmodule Gleanex.HTTP do
 
   defp handle({:ok, %Req.Response{status: status} = response}, operation, _call)
        when status in 200..299 do
-    {:ok, decode(response, operation, status)}
+    {:ok, decode(response, operation)}
   end
 
   defp handle({:ok, %Req.Response{} = response}, _operation, call) do
@@ -184,7 +179,7 @@ defmodule Gleanex.HTTP do
     {:error, Error.from_exception(exception, call)}
   end
 
-  defp decode(%Req.Response{body: body}, operation, status) do
+  defp decode(%Req.Response{body: body, status: status}, operation) do
     body = normalise_body(body)
 
     case response_type(operation, status) do

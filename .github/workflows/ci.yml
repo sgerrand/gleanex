@@ -104,6 +104,19 @@ jobs:
 
       - run: mix credo --strict
 
+  markdown:
+    name: Markdown
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # Kept out of the lint job above: mado is a standalone binary, so this
+      # needs neither the BEAM nor the dependency cache. Rules and exclusions
+      # live in mado.toml, which the action's default `check .` picks up, so a
+      # local `mado check` behaves the same as CI.
+      - uses: akiomik/mado@177695b4d2cd6b107f881a8e91067cc7588fb129 # v0.3.1
+
   generated:
     name: Generated code is current
     runs-on: ubuntu-latest

@@ -15,6 +15,14 @@ mix dialyzer
 mix docs
 ```
 
+`mix deps.get` plus `mix compile` installs git hooks via `git_hooks`, configured
+under the `:git_hooks` key in `config/config.exs`. pre-commit runs
+`mix format --check-formatted` and `mix credo --strict`; pre-push runs
+`mix compile --warnings-as-errors` and `mix test --cover`. Dialyzer is in
+neither, because
+building its PLT takes minutes. `--no-verify` skips either. Re-run
+`mix git_hooks.install` after changing the task list.
+
 Running a subset:
 
 ```sh

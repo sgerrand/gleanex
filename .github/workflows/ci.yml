@@ -16,7 +16,57 @@ permissions:
 
 jobs:
   test:
-    name: Tests
+    name: Tests (Elixir ${{ matrix.elixir }} / OTP ${{ matrix.otp }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      # An old version failing should not hide the result on a newer one.
+      fail-fast: false
+      matrix:
+        # One row per Elixir minor the package supports, each on the newest OTP
+        # that minor builds against. The floor is the `elixir:` requirement in
+        # mix.exs; the top row is what .tool-versions pins and therefore what
+        # every other job here runs, so bumping .tool-versions means bumping it
+        # here too. Versions are spelled out because setup-beam reads a single
+        # pair from .tool-versions and a matrix needs several.
+        include:
+          - elixir: "1.18.4"
+            otp: "27.3.4.16"
+          - elixir: "1.19.5"
+            otp: "28.5.0.5"
+          - elixir: "1.20.2"
+            otp: "29.0.4"
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
+        id: beam
+        with:
+          elixir-version: ${{ matrix.elixir }}
+          otp-version: ${{ matrix.otp }}
+          version-type: strict
+
+      - name: Restore dependencies and build
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            deps
+            _build
+          key: test-${{ runner.os }}-${{ steps.beam.outputs.otp-version }}-${{ steps.beam.outputs.elixir-version }}-${{ hashFiles('mix.lock') }}
+          restore-keys: |
+            test-${{ runner.os }}-${{ steps.beam.outputs.otp-version }}-${{ steps.beam.outputs.elixir-version }}-
+
+      - run: mix deps.get
+
+      - run: mix compile --warnings-as-errors
+
+      # --cover enforces the 100% threshold set in mix.exs, so a new branch
+      # arriving without a test fails here rather than at review.
+      - run: mix test --cover
+
+  lint:
+    name: Formatting and Credo
     runs-on: ubuntu-latest
 
     steps:
@@ -36,22 +86,21 @@ jobs:
           path: |
             deps
             _build
-          key: test-${{ runner.os }}-${{ steps.beam.outputs.otp-version }}-${{ steps.beam.outputs.elixir-version }}-${{ hashFiles('mix.lock') }}
+          key: lint-${{ runner.os }}-${{ steps.beam.outputs.otp-version }}-${{ steps.beam.outputs.elixir-version }}-${{ hashFiles('mix.lock') }}
           restore-keys: |
-            test-${{ runner.os }}-${{ steps.beam.outputs.otp-version }}-${{ steps.beam.outputs.elixir-version }}-
+            lint-${{ runner.os }}-${{ steps.beam.outputs.otp-version }}-${{ steps.beam.outputs.elixir-version }}-
 
-      - run: mix deps.get
+      # --check-locked fails rather than rewriting mix.lock, so a mix.exs change
+      # committed without its lockfile update is caught here.
+      - run: mix deps.get --check-locked
 
       # Fails if mix.lock has entries no longer reachable from mix.exs.
       - run: mix deps.unlock --check-unused
 
+      # Pinned rather than run across the matrix: the formatter's output moves
+      # between Elixir versions, so checking it on more than one would ask the
+      # tree to satisfy every version at once.
       - run: mix format --check-formatted
-
-      - run: mix compile --warnings-as-errors
-
-      # --cover enforces the 100% threshold set in mix.exs, so a new branch
-      # arriving without a test fails here rather than at review.
-      - run: mix test --cover
 
       - run: mix credo --strict
 

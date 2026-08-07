@@ -50,4 +50,37 @@ if config_env() == :dev do
     platform:
       put_output.(shared, base_module: Gleanex.Platform, location: "lib/gleanex/platform"),
     admin: put_output.(shared, base_module: Gleanex.Admin, location: "lib/gleanex/admin")
+
+  # Local git hooks, run by git_hooks. These mirror the CI jobs in
+  # .github/workflows/ci.yml, split by how long they take: the cheap checks run
+  # on every commit, the slow ones only when work leaves the machine.
+  #
+  # Dialyzer is left out of both. Its first run builds a PLT that takes minutes,
+  # which is too much to put in front of a push; CI runs it on its own cached
+  # PLT instead.
+  #
+  # Skip either with `git commit --no-verify` / `git push --no-verify`.
+  config :git_hooks,
+    # Writes .git/hooks/pre-commit and .git/hooks/pre-push on the first compile
+    # after `mix deps.get`, so a fresh clone needs no extra setup step.
+    auto_install: true,
+    verbose: true,
+    hooks: [
+      pre_commit: [
+        tasks: [
+          # Both are seconds on an already-compiled tree, and both fail for
+          # reasons the author can fix on the spot.
+          {:cmd, "mix format --check-formatted"},
+          {:cmd, "mix credo --strict"}
+        ]
+      ],
+      pre_push: [
+        tasks: [
+          {:cmd, "mix compile --warnings-as-errors"},
+          # --cover, not plain `mix test`: the 100% threshold in mix.exs is only
+          # enforced with it, and that is the check worth having here.
+          {:cmd, "mix test --cover"}
+        ]
+      ]
+    ]
 end

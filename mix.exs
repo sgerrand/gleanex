@@ -64,7 +64,11 @@ defmodule Gleanex.MixProject do
       {:yaml_elixir, "~> 2.9", only: [:dev, :test], runtime: false},
       {:ex_doc, "~> 0.34", only: :dev, runtime: false},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
-      {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false}
+      {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
+      # Installs the pre-commit and pre-push hooks configured in
+      # config/config.exs on its first compile. Dev only: the hooks are a local
+      # convenience, and CI runs the same checks itself.
+      {:git_hooks, "~> 0.9", only: [:dev], runtime: false}
     ]
   end
 

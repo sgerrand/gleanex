@@ -37,6 +37,18 @@ defmodule Gleanex.Config do
   `:base_url` overrides the host root only — always give it scheme and host with
   no path, for example `https://mycompany-be.glean.com`. The per-API prefix is
   still appended.
+
+  ## The token is hidden from inspect
+
+  Inspecting a config does not print its token, so a crash report, a log line or
+  an error tracker cannot leak the credential:
+
+      iex> config = Gleanex.new(domain: "mycompany", token: "secret")
+      iex> inspect(config) =~ "secret"
+      false
+
+  Read `config.token` to get at it. This only affects `inspect/1`; the token is
+  an ordinary field otherwise.
   """
 
   alias Gleanex.Error
@@ -58,6 +70,11 @@ defmodule Gleanex.Config do
           req_options: keyword
         }
 
+  # The token is kept out of `inspect/1`. A config reaches an inspect call more
+  # often than it looks: a crash report prints the arguments of every frame, and
+  # error trackers and dashboards print process state. Redacting here means none
+  # of those leak a credential.
+  @derive {Inspect, except: [:token]}
   defstruct domain: nil,
             base_url: nil,
             token: nil,

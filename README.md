@@ -36,6 +36,9 @@ without the TLD. Requests go to `https://{domain}-be.glean.com`.
 With `GLEAN_INSTANCE` and `GLEAN_API_TOKEN` exported you can leave the config
 out and each call falls back to the environment.
 
+Inspecting a config does not print its token, so a crash report or a log line
+cannot leak it. Read `config.token` when you need the value itself.
+
 Those two shortcuts cover the common case. Everything else is a generated
 operation:
 

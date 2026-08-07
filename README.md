@@ -7,6 +7,8 @@ tracks the real API rather than a hand-picked subset.
 
 ## Install
 
+<!-- x-release-please-start-version -->
+
 ```elixir
 def deps do
   [
@@ -14,6 +16,8 @@ def deps do
   ]
 end
 ```
+
+<!-- x-release-please-end -->
 
 Needs Elixir 1.18 or later.
 
@@ -205,10 +209,16 @@ run through [release-mate](https://github.com/release-mate/action) with a
 short-lived GitHub App token.
 
 Every Conventional Commit landed on `main` is collected into a release pull
-request that stays open and updates itself. Merging it does four things: bumps
-`@version` in `mix.exs`, rewrites `CHANGELOG.md`, tags the commit `vX.Y.Z` and
-cuts the GitHub release. Nothing to run by hand, and no version to remember to
-bump.
+request that stays open and updates itself. Merging it bumps `@version` in
+`mix.exs`, rewrites `CHANGELOG.md`, updates the version in the install snippet
+above, tags the commit `vX.Y.Z` and cuts the GitHub release. Nothing to run by
+hand, and no version to remember to bump.
+
+The install snippet is kept in step by the `x-release-please-start-version` and
+`x-release-please-end` comments around it, with `README.md` listed under
+`extra-files` in `release-please-config.json`. Any version number between those
+two comments is rewritten on release, so keep unrelated versions out of that
+block.
 
 Which commits appear in the changelog follows `release-please-config.json`:
 `feat`, `fix`, `perf` and `revert` are listed, everything else is recorded but

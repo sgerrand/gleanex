@@ -95,6 +95,9 @@ case Gleanex.search(config, "holidays") do
 end
 ```
 
+`retry_after` is always a number of seconds, whether Glean sent a delay or a
+date.
+
 Successful responses are decoded into structs. Field names are Glean's own
 camelCase, matching their documentation, so request maps and response structs
 agree with each other:

@@ -47,10 +47,29 @@ defmodule Gleanex.ErrorTest do
       assert Exception.message(error) =~ "Slow down"
     end
 
-    test "ignores a Retry-After given as an HTTP date, which Gleanex cannot use directly" do
-      response = response(429, %{}, [{"retry-after", "Wed, 21 Oct 2026 07:28:00 GMT"}])
+    test "converts a Retry-After given as a date into seconds" do
+      date =
+        DateTime.utc_now()
+        |> DateTime.add(60, :second)
+        |> Calendar.strftime("%a, %d %b %Y %H:%M:%S GMT")
 
-      assert %Error{retry_after: nil} = Error.from_response(response)
+      assert %Error{retry_after: seconds} =
+               Error.from_response(response(429, %{}, [{"retry-after", date}]))
+
+      assert seconds in 55..60
+    end
+
+    test "reports a Retry-After date already in the past as no wait at all" do
+      response = response(429, %{}, [{"retry-after", "Wed, 21 Oct 2015 07:28:00 GMT"}])
+
+      assert %Error{retry_after: 0} = Error.from_response(response)
+    end
+
+    test "ignores a Retry-After date it cannot read" do
+      for value <- ["Wed, 21 Xyz 2026 07:28:00 GMT", "Wed, 32 Oct 2026 07:28:00 GMT", "tomorrow"] do
+        assert %Error{retry_after: nil} =
+                 Error.from_response(response(429, %{}, [{"retry-after", value}]))
+      end
     end
 
     test "ignores a negative Retry-After" do

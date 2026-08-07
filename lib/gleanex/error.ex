@@ -9,8 +9,9 @@ defmodule Gleanex.Error do
       is sent. Missing token, unresolvable domain, wrong token scope.
     * `:transport` - the request never got a response: timeout, refused
       connection, TLS failure. `exception` holds the underlying error.
-    * `:rate_limited` - HTTP 429. `retry_after` holds the header value in
-      seconds when Glean sent one.
+    * `:rate_limited` - HTTP 429. `retry_after` holds how many seconds to wait,
+      when Glean sent a `Retry-After` header. A header giving a date rather than
+      a delay is converted, so this is always seconds.
     * `:problem_detail` - the response carried an RFC 7807 body, parsed into
       `problem`.
     * `:http` - any other unsuccessful status, with the decoded `body`.
@@ -142,7 +143,52 @@ defmodule Gleanex.Error do
   defp parse_retry_after(value) when is_binary(value) do
     case Integer.parse(value) do
       {seconds, ""} when seconds >= 0 -> seconds
+      {_negative, ""} -> nil
+      _ -> parse_http_date(value)
+    end
+  end
+
+  # RFC 9110 lets `Retry-After` carry either a delay in seconds or a date, and
+  # both forms reach callers here as seconds so there is only one thing to back
+  # off on.
+  #
+  # Only the IMF-fixdate form is read, because that is the only one a server is
+  # allowed to send. The two obsolete formats a recipient may also see are rare
+  # enough that guessing at them is worse than reporting nothing.
+  #
+  # The delay is measured against this machine's clock. A date already in the
+  # past, which is what a clock running fast looks like, becomes 0: retry now.
+  @months ~w(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec)
+
+  defp parse_http_date(value) do
+    with [_, day, month, year, hour, minute, second] <-
+           Regex.run(
+             ~r/^[A-Za-z]{3}, (\d{2}) ([A-Za-z]{3}) (\d{4}) (\d{2}):(\d{2}):(\d{2}) GMT$/,
+             value
+           ),
+         {:ok, month} <- month_number(month),
+         {:ok, datetime} <-
+           NaiveDateTime.new(
+             String.to_integer(year),
+             month,
+             String.to_integer(day),
+             String.to_integer(hour),
+             String.to_integer(minute),
+             String.to_integer(second)
+           ) do
+      datetime
+      |> DateTime.from_naive!("Etc/UTC")
+      |> DateTime.diff(DateTime.utc_now())
+      |> max(0)
+    else
       _ -> nil
+    end
+  end
+
+  defp month_number(month) do
+    case Enum.find_index(@months, &(&1 == month)) do
+      nil -> :error
+      index -> {:ok, index + 1}
     end
   end
 end

@@ -88,9 +88,18 @@ defmodule Gleanex.MixProject do
       main: "readme",
       extras: ["README.md", "CHANGELOG.md"],
       source_ref: "v#{@version}",
-      # Dev-only build tooling, and the chunk reassembly shared by Gleanex.SSE
-      # and Gleanex.NDJSON. Neither is part of the published surface.
-      ignore_modules: [Gleanex.Generator.Processor, Gleanex.Framing],
+      # Dev-only build tooling, plus the three modules that only exist to serve
+      # the transport: chunk reassembly shared by Gleanex.SSE and Gleanex.NDJSON,
+      # and the encode and decode steps either side of a request. None is part
+      # of the published surface.
+      ignore_modules: [
+        Gleanex.Generator.Processor,
+        Gleanex.Framing,
+        Gleanex.Body,
+        Gleanex.Decoder
+      ],
+      # Every module not matched here lands in an unnamed group below the five
+      # hundred generated ones, so anything documented has to be listed.
       groups_for_modules: [
         Core: [
           Gleanex,
@@ -99,7 +108,12 @@ defmodule Gleanex.MixProject do
           Gleanex.HTTP,
           Gleanex.Retry,
           Gleanex.Pagination,
-          Gleanex.SSE
+          Gleanex.Bulk,
+          Gleanex.Streaming,
+          Gleanex.SSE,
+          Gleanex.SSE.Event,
+          Gleanex.NDJSON,
+          Gleanex.ProblemDetail
         ],
         "Client API": [~r/^Gleanex\.Client\./],
         "Indexing API": [~r/^Gleanex\.Indexing\./],

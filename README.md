@@ -198,10 +198,11 @@ from `config/config.exs` and the plugin in `dev/gleanex/generator/processor.ex`.
 ### Git hooks
 
 `mix deps.get` followed by `mix git_hoox.install` writes two hooks. They run the
-same checks CI does, split by how long they take:
+checks CI does, split by how long they take, plus two CI does not:
 
-- **pre-commit** — `mix format --check-formatted`, `mix credo --strict` and
-  `mado check .`, the last only when the commit touches Markdown.
+- **pre-commit** — `mix format --check-formatted`, `mix credo --strict`,
+  `mix deps.unlock --check-unused` when the commit touches `mix.exs` or
+  `mix.lock`, and `mado check .` when it touches Markdown.
 - **pre-push** — `mix compile --warnings-as-errors` and `mix test --cover`.
 
 Dialyzer is in neither. Its first run builds a PLT that takes minutes, which is

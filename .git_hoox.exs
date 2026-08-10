@@ -18,6 +18,12 @@
       # The default timeout is 30 seconds, which a commit touching a large slice
       # of the generated tree can outrun.
       {GitHoox.Hooks.Credo, strict: true, timeout: 120_000},
+      # Catches a lock left carrying dependencies mix.exs no longer names,
+      # which is what a removed dependency leaves behind. Read-only: the
+      # --check-unused form reports and fails, `mix deps.unlock --unused`
+      # is what rewrites the lock.
+      {GitHoox.Hooks.Shell,
+       run: "mix deps.unlock --check-unused", files: ["mix.exs", "mix.lock"]},
       # Markdown lint. It checks the whole tree rather than the staged files,
       # but the files glob keeps it out of the way of commits that touch no
       # Markdown. Needs mado on PATH; without it the hook fails.

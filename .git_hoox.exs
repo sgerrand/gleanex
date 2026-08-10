@@ -17,7 +17,11 @@
       {GitHoox.Hooks.Format, check_only: true},
       # The default timeout is 30 seconds, which a commit touching a large slice
       # of the generated tree can outrun.
-      {GitHoox.Hooks.Credo, strict: true, timeout: 120_000}
+      {GitHoox.Hooks.Credo, strict: true, timeout: 120_000},
+      # Markdown lint. It checks the whole tree rather than the staged files,
+      # but the files glob keeps it out of the way of commits that touch no
+      # Markdown. Needs mado on PATH; without it the hook fails.
+      {GitHoox.Hooks.Shell, run: "mado check .", files: ["**/*.md"]}
     ],
     pre_push: [
       # Shell, not the dedicated hooks: the compile flags and `mix test --cover`

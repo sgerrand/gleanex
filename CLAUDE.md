@@ -16,8 +16,9 @@ mix docs
 ```
 
 `mix git_hoox.install` writes git hooks via `git_hoox`, configured in
-`.git_hoox.exs` at the repository root. pre-commit runs `mix format
---check-formatted` and `mix credo --strict` over staged files; pre-push runs
+`.git_hoox.exs` at the repository root. pre-commit runs
+`mix format --check-formatted`, `mix credo --strict` and `mado check .`;
+the first two see staged files only. pre-push runs
 `mix compile --warnings-as-errors` and `mix test --cover`. Dialyzer is in
 neither, because
 building its PLT takes minutes. `--no-verify` skips either. Re-run

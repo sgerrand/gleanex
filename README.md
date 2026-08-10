@@ -197,9 +197,8 @@ from `config/config.exs` and the plugin in `dev/gleanex/generator/processor.ex`.
 
 ### Git hooks
 
-`mix deps.get` followed by `mix compile` installs two hooks, so a clone needs no
-setup step of its own. They run the same checks CI does, split by how long they
-take:
+`mix deps.get` followed by `mix git_hoox.install` writes two hooks. They run the
+same checks CI does, split by how long they take:
 
 - **pre-commit** — `mix format --check-formatted` and `mix credo --strict`.
 - **pre-push** — `mix compile --warnings-as-errors` and `mix test --cover`.
@@ -208,8 +207,8 @@ Dialyzer is in neither. Its first run builds a PLT that takes minutes, which is
 too long to sit in front of a push, so CI runs it on a cached PLT instead.
 
 Skip a hook with `git commit --no-verify` or `git push --no-verify`. The tasks
-live under the `:git_hooks` key in `config/config.exs`; re-run
-`mix git_hooks.install` after changing them.
+live in `.git_hoox.exs` at the repository root; re-run `mix git_hoox.install`
+after changing them.
 
 ### Integration tests
 

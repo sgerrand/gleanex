@@ -12,7 +12,7 @@ tracks the real API rather than a hand-picked subset.
 ```elixir
 def deps do
   [
-    {:gleanex, "~> 0.1.0"}
+    {:gleanex, "~> 0.2.0"}
   ]
 end
 ```

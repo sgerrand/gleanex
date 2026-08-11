@@ -109,6 +109,81 @@ defmodule Gleanex.HTTPTest do
                  req_options: [headers: [{"x-from", "call"}]]
                )
     end
+
+    test "an added header keeps the ones Gleanex sets", %{config: config} do
+      Req.Test.stub(GleanexStub, fn conn ->
+        assert Plug.Conn.get_req_header(conn, "x-request-id") == ["abc"]
+        assert [user_agent] = Plug.Conn.get_req_header(conn, "user-agent")
+        assert user_agent =~ ~r{^gleanex/}
+        assert Plug.Conn.get_req_header(conn, "authorization") == ["Bearer secret"]
+
+        Req.Test.json(conn, %{})
+      end)
+
+      assert {:ok, _} =
+               SupportSearch.search(%{query: "q"},
+                 config: config,
+                 req_options: [headers: [{"x-request-id", "abc"}]]
+               )
+    end
+
+    test "a header override displaces the one it names, whatever its case",
+         %{config: config} do
+      Req.Test.stub(GleanexStub, fn conn ->
+        assert Plug.Conn.get_req_header(conn, "user-agent") == ["mine/1.0"]
+        Req.Test.json(conn, %{})
+      end)
+
+      assert {:ok, _} =
+               SupportSearch.search(%{query: "q"},
+                 config: config,
+                 req_options: [headers: [{"User-Agent", "mine/1.0"}]]
+               )
+    end
+
+    test "an added query parameter keeps the operation's", %{config: config} do
+      Req.Test.stub(GleanexStub, fn conn ->
+        assert URI.decode_query(conn.query_string) == %{"verbose" => "true", "trace" => "1"}
+        Req.Test.json(conn, %{})
+      end)
+
+      assert {:ok, _} =
+               SupportDatasources.credential_status("jira-1",
+                 config: config,
+                 verbose: true,
+                 req_options: [params: [trace: "1"]]
+               )
+    end
+
+    test "a query parameter override displaces the operation's by name", %{config: config} do
+      Req.Test.stub(GleanexStub, fn conn ->
+        assert URI.decode_query(conn.query_string) == %{"verbose" => "false"}
+        Req.Test.json(conn, %{})
+      end)
+
+      assert {:ok, _} =
+               SupportDatasources.credential_status("jira-1",
+                 config: config,
+                 verbose: true,
+                 req_options: [params: %{"verbose" => "false"}]
+               )
+    end
+
+    test "options that are not collections are still replaced outright",
+         %{config: config} do
+      config = %{config | receive_timeout: 1_000}
+
+      Req.Test.stub(GleanexStub, fn conn -> Req.Test.json(conn, %{}) end)
+
+      request =
+        Gleanex.HTTP.build_request(config, :client, %{
+          url: "/search",
+          method: :post,
+          opts: [req_options: [receive_timeout: 5_000]]
+        })
+
+      assert request.options.receive_timeout == 5_000
+    end
   end
 
   describe "response decoding" do

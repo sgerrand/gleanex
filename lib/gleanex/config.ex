@@ -116,7 +116,9 @@ defmodule Gleanex.Config do
     * `:scope` - `:client` (default) or `:indexing`.
     * `:retry` - a `Gleanex.Retry` policy.
     * `:receive_timeout` - milliseconds to wait for a response, default `30_000`.
-    * `:req_options` - options passed straight through to `Req`.
+    * `:req_options` - options passed straight through to `Req`. `:headers` and
+      `:params` are merged with the ones Gleanex sets rather than replacing
+      them; see `Gleanex.HTTP.build_request/3`.
 
   """
   @spec new(keyword) :: t

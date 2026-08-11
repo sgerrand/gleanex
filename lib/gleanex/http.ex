@@ -16,7 +16,9 @@ defmodule Gleanex.HTTP do
       environment.
     * `:receive_timeout` - override the config's timeout for this call.
     * `:retry` - override the config's `Gleanex.Retry` policy for this call.
-    * `:req_options` - extra `Req` options, merged over the config's.
+    * `:req_options` - extra `Req` options, merged over the config's. `:headers`
+      and `:params` are merged entry by entry rather than wholesale, so adding
+      one of either keeps the ones already there; see `build_request/3`.
     * `:client` - swap this module out entirely, handled by the generated code.
 
   ## Telemetry
@@ -97,6 +99,10 @@ defmodule Gleanex.HTTP do
   handling but has to consume the response body as it arrives rather than all at
   once. Options under the operation's `:opts` are applied last, so a caller can
   add `into: :self` through `req_options`.
+
+  `:headers` and `:params` are collections of named values, so an override
+  replaces the entries it names and leaves the rest in place. Everything else is
+  a single value and an override replaces it outright.
   """
   @spec build_request(Config.t(), Config.api(), map) :: Req.Request.t()
   def build_request(config, api, operation) do
@@ -113,11 +119,45 @@ defmodule Gleanex.HTTP do
     ]
     |> add_query(Map.get(operation, :query))
     |> add_body(operation)
-    |> Keyword.merge(retry_options(config, opts))
-    |> Keyword.merge(config.req_options)
-    |> Keyword.merge(Keyword.get(opts, :req_options, []))
+    |> merge_options(retry_options(config, opts))
+    |> merge_options(config.req_options)
+    |> merge_options(Keyword.get(opts, :req_options, []))
     |> Req.new()
   end
+
+  # `Keyword.merge/2` replaces a whole value, which is right for the options
+  # holding one setting and wrong for the two holding a collection of named
+  # ones. A config adding a header would take the user agent with it, and one
+  # setting `:params` would take an operation's own query parameters with it,
+  # leaving a request Glean accepts and answers wrongly. Those two are merged by
+  # name instead: an override displaces the entry it names and nothing else.
+  defp merge_options(base, overrides) do
+    Keyword.merge(base, overrides, fn
+      :headers, existing, new -> merge_named(existing, new, &header_name/1)
+      :params, existing, new -> merge_named(existing, new, &to_string/1)
+      _key, _existing, new -> new
+    end)
+  end
+
+  defp merge_named(existing, new, name) do
+    new = pairs(new)
+    replaced = MapSet.new(new, fn {key, _value} -> name.(key) end)
+
+    Enum.reject(pairs(existing), fn {key, _value} ->
+      MapSet.member?(replaced, name.(key))
+    end) ++ new
+  end
+
+  # `Req` takes either option as a map or as a list of pairs; comparing them
+  # needs one shape.
+  defp pairs(values) when is_map(values), do: Map.to_list(values)
+  defp pairs(values) when is_list(values), do: values
+
+  # Header names are case insensitive, so an override spelled "User-Agent" has
+  # to displace the "user-agent" set above. Query parameter names are not, and
+  # are only run through `to_string/1` so that the atom keys generated
+  # operations use and the strings a caller may write compare equal.
+  defp header_name(name), do: name |> to_string() |> String.downcase()
 
   defp send_request(config, api, operation, call) do
     metadata = %{

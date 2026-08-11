@@ -53,9 +53,16 @@ those and regenerate.
 Everything else under `lib/` is hand-written. Generation is deterministic, and
 CI fails if the committed tree does not match `priv/openapi/`.
 
-`dev/` is on `elixirc_paths` for `:dev` only, because the plugin depends on
-`oapi_generator`, a dev-only dependency. It must never be compiled into the
-package.
+`dev/` holds everything that builds Gleanex but is not part of it, and never
+reaches the package. Two halves, on different `elixirc_paths`:
+
+- `dev/gleanex/generator/processor.ex` is the generator plugin, compiled in
+  `:dev` only. It depends on `oapi_generator`, a dev-only dependency, so it
+  cannot be compiled anywhere else.
+- `dev/mix/tasks/` holds `mix glean.gen` and `mix glean.specs`, compiled in
+  `:dev` and `:test`. They are outside `lib/` so they cannot ship: `glean.gen`
+  drives `oapi_generator`, which an installed copy does not have, so a shipped
+  task would only ever fail. `:test` is on the list because their tests are.
 
 ## The transport contract
 

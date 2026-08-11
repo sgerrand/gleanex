@@ -4,6 +4,17 @@ defmodule Gleanex.MixProject do
   @version "0.1.0"
   @source_url "https://github.com/sgerrand/gleanex"
 
+  # Kept out of the published documentation. Dev-only build tooling, plus the
+  # three modules that only exist to serve the transport: chunk reassembly
+  # shared by Gleanex.SSE and Gleanex.NDJSON, and the encode and decode steps
+  # either side of a request. None is part of the published surface.
+  @undocumented [
+    Gleanex.Generator.Processor,
+    Gleanex.Framing,
+    Gleanex.Body,
+    Gleanex.Decoder
+  ]
+
   def project do
     [
       app: :gleanex,
@@ -92,16 +103,10 @@ defmodule Gleanex.MixProject do
       main: "readme",
       extras: ["README.md", "CHANGELOG.md"],
       source_ref: "v#{@version}",
-      # Dev-only build tooling, plus the three modules that only exist to serve
-      # the transport: chunk reassembly shared by Gleanex.SSE and Gleanex.NDJSON,
-      # and the encode and decode steps either side of a request. None is part
-      # of the published surface.
-      ignore_modules: [
-        Gleanex.Generator.Processor,
-        Gleanex.Framing,
-        Gleanex.Body,
-        Gleanex.Decoder
-      ],
+      # ex_doc takes a predicate here, and has no `:ignore_modules` option. An
+      # unrecognised key is accepted in silence rather than refused, so spelling
+      # it the other way documents the lot and reports nothing.
+      filter_modules: fn module, _metadata -> module not in @undocumented end,
       # Every module not matched here lands in an unnamed group below the five
       # hundred generated ones, so anything documented has to be listed.
       groups_for_modules: [

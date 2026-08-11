@@ -7,9 +7,13 @@ defmodule Gleanex.MixProject do
   # Kept out of the published documentation. Dev-only build tooling, plus the
   # three modules that only exist to serve the transport: chunk reassembly
   # shared by Gleanex.SSE and Gleanex.NDJSON, and the encode and decode steps
-  # either side of a request. None is part of the published surface.
+  # either side of a request. None is part of the published surface, and the two
+  # Mix tasks are not even in the package; the README documents those for
+  # contributors instead.
   @undocumented [
     Gleanex.Generator.Processor,
+    Mix.Tasks.Glean.Gen,
+    Mix.Tasks.Glean.Specs,
     Gleanex.Framing,
     Gleanex.Body,
     Gleanex.Decoder
@@ -59,9 +63,15 @@ defmodule Gleanex.MixProject do
     ]
   end
 
-  defp elixirc_paths(:test), do: ["lib", "test/support"]
-  # `dev/` holds the code generation plugin. It depends on oapi_generator, which
-  # is a dev-only dependency, so it must never be compiled into the package.
+  # `dev/mix` holds the repository's own Mix tasks, which depend on nothing a
+  # consumer does not already have. They live outside `lib` so that they cannot
+  # reach the package: `mix glean.gen` drives oapi_generator, which is not a
+  # dependency of the built package, so shipping the task would put a broken
+  # entry in every consumer's `mix help`. Their tests need them compiled.
+  defp elixirc_paths(:test), do: ["lib", "dev/mix", "test/support"]
+  # The rest of `dev/` is the code generation plugin. It depends on
+  # oapi_generator, a dev-only dependency, so it must never be compiled into the
+  # package.
   defp elixirc_paths(:dev), do: ["lib", "dev"]
   defp elixirc_paths(_), do: ["lib"]
 

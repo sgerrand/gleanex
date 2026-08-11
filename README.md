@@ -183,6 +183,9 @@ mix glean.gen        # regenerate lib/gleanex/{client,indexing,platform,admin}/
 mix test --cover     # the suite, at an enforced 100% threshold
 ```
 
+Both tasks live in `dev/mix/tasks/` and are not part of the package, so they are
+available in a checkout of this repository and nowhere else.
+
 `priv/openapi/.api-version` records the exact upstream commit the committed code
 came from. Regeneration is deterministic: with unchanged descriptions it should
 leave the working tree clean.

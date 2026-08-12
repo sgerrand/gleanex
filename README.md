@@ -63,7 +63,7 @@ The config travels in the trailing options, alongside per-call overrides like
 | `Gleanex.Client` | search, chat, agents, documents, collections, pins, insights | client |
 | `Gleanex.Indexing` | pushing documents, people, groups and permissions into the index | indexing |
 | `Gleanex.Platform` | agents, skills and the newer search endpoints | client |
-| `Gleanex.Admin` | governance policies, reports, findings, datasource administration | client |
+| `Gleanex.Admin` | governance policies, reports, findings, datasource administration | client, with governance scopes |
 
 Client and Indexing tokens are not interchangeable. Build one config per scope,
 and a mismatched call fails before it leaves your machine:
@@ -73,6 +73,17 @@ indexing = Gleanex.new(domain: "mycompany", token: indexing_token, scope: :index
 
 {:ok, _} = Gleanex.Indexing.Documents.indexdocument(%{document: document}, config: indexing)
 ```
+
+Those are the only two families, which is why three of the four rows say
+`client`.
+
+A token also carries permission scopes, set when you create it, and those decide
+which endpoints it may call. Gleanex cannot see them, so a token of the right
+family with the wrong permissions gets through the check above and is refused by
+Glean with a 403. The Admin API is where that shows up: a client token that
+searches perfectly well cannot read governance policies unless it was created
+with the `DATA_GOVERNANCE` scope, or change visibility overrides without
+`CONTENT_HIDING`.
 
 ## Results
 

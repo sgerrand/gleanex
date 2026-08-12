@@ -50,6 +50,21 @@ defmodule Gleanex.Config do
       Gleanex.new(domain: "mycompany", token: token,
         req_options: [base_url: "https://proxy.internal/glean/rest/api/v1"])
 
+  ## Connection pooling
+
+  `Req` shares one automatically started connection pool across the whole node,
+  so every config here uses the same one by default. A long bulk index run can
+  therefore hold connections that interactive searches are waiting for.
+
+  Pass a `Finch` instance of your own to keep the two apart:
+
+      Gleanex.new(domain: "mycompany", token: indexing_token, scope: :indexing,
+        req_options: [finch: [name: MyApp.IndexingPool]])
+
+  The instance has to be started in your supervision tree. The same option
+  carries the pool's connection limits, and `:connect_options` sets the connect
+  timeout, which `:receive_timeout` does not cover.
+
   ## The token is hidden from inspect
 
   Inspecting a config does not print its token, so a crash report, a log line or

@@ -22,11 +22,15 @@ defmodule Gleanex.Config do
 
   1. options passed to `new/1`
   2. application environment under `:gleanex`
-  3. the `GLEAN_API_TOKEN` and `GLEAN_INSTANCE` environment variables
+  3. the `GLEAN_API_TOKEN`, `GLEAN_INSTANCE` and `GLEAN_BASE_URL` environment
+     variables, holding `:token`, `:domain` and `:base_url` respectively
 
       config :gleanex,
         domain: "mycompany",
         token: {:system, "GLEAN_API_TOKEN"}
+
+  Only those three have an environment variable. Every other setting comes from
+  `new/1` or the application environment.
 
   ## Domain and base URL
 
@@ -45,6 +49,21 @@ defmodule Gleanex.Config do
 
       Gleanex.new(domain: "mycompany", token: token,
         req_options: [base_url: "https://proxy.internal/glean/rest/api/v1"])
+
+  ## Connection pooling
+
+  `Req` shares one automatically started connection pool across the whole node,
+  so every config here uses the same one by default. A long bulk index run can
+  therefore hold connections that interactive searches are waiting for.
+
+  Pass a `Finch` instance of your own to keep the two apart:
+
+      Gleanex.new(domain: "mycompany", token: indexing_token, scope: :indexing,
+        req_options: [finch: [name: MyApp.IndexingPool]])
+
+  The instance has to be started in your supervision tree. The same option
+  carries the pool's connection limits, and `:connect_options` sets the connect
+  timeout, which `:receive_timeout` does not cover.
 
   ## The token is hidden from inspect
 
@@ -110,8 +129,10 @@ defmodule Gleanex.Config do
   ## Options
 
     * `:domain` - backend subdomain, for example `"mycompany"`. `:instance` is
-      accepted as an alias, matching the Go SDK's `WithInstance`.
-    * `:base_url` - host root override, skipping domain templating.
+      accepted as an alias, matching the Go SDK's `WithInstance`. Defaults to
+      `GLEAN_INSTANCE`.
+    * `:base_url` - host root override, skipping domain templating. Defaults to
+      `GLEAN_BASE_URL`.
     * `:token` - API token. Defaults to `GLEAN_API_TOKEN`.
     * `:scope` - `:client` (default) or `:indexing`.
     * `:retry` - a `Gleanex.Retry` policy.

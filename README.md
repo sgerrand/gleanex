@@ -119,6 +119,34 @@ Gleanex.search(config, "holidays", retry: Gleanex.Retry.disabled())
 Gleanex.search(config, "holidays", receive_timeout: 60_000)
 ```
 
+## Connection pooling
+
+Requests go through `Req`, which shares one automatically started connection
+pool across everything in the node. That is fine until two very different kinds
+of traffic share it: a long bulk index run can hold every connection and leave
+interactive searches waiting behind it.
+
+Give the slow work its own pool. Start a `Finch` instance in your supervision
+tree and name it on the config that does the indexing:
+
+```elixir
+children = [
+  {Finch, name: MyApp.IndexingPool, pools: %{default: [size: 10]}}
+]
+
+indexing =
+  Gleanex.new(
+    domain: "mycompany",
+    token: indexing_token,
+    scope: :indexing,
+    req_options: [finch: [name: MyApp.IndexingPool]]
+  )
+```
+
+Searches keep using the default pool, and the two can no longer starve each
+other. The same option sets connection limits, and `:connect_options` sets the
+connect timeout, separately from the `:receive_timeout` above.
+
 ## Paging
 
 Cursor-paginated endpoints become a `Stream`:

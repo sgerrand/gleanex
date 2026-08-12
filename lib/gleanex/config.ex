@@ -154,7 +154,8 @@ defmodule Gleanex.Config do
       `GLEAN_BASE_URL`.
     * `:token` - API token. Defaults to `GLEAN_API_TOKEN`.
     * `:scope` - `:client` (default) or `:indexing`.
-    * `:retry` - a `Gleanex.Retry` policy.
+    * `:retry` - a `Gleanex.Retry` policy. Left alone, the condition is chosen
+      per API, and Indexing gets a narrower one than the rest because it writes.
     * `:receive_timeout` - milliseconds to wait for a response, default `30_000`.
     * `:req_options` - options passed straight through to `Req`. `:headers` and
       `:params` are merged with the ones Gleanex sets rather than replacing

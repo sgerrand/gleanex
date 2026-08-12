@@ -364,6 +364,81 @@ defmodule Gleanex.HTTPTest do
       assert {:error, %Error{status: 500}} = SupportSearch.search(%{query: "q"}, config: config)
       assert value(counter) == 1
     end
+
+    test "a 500 from Indexing is not retried, because the write may have landed",
+         %{indexing_config: config} do
+      counter = start_counter()
+
+      Req.Test.stub(GleanexStub, fn conn ->
+        bump(counter)
+        conn |> Plug.Conn.put_status(500) |> Req.Test.json(%{title: "Boom"})
+      end)
+
+      config = %{config | retry: %Gleanex.Retry{delay: fn _ -> 0 end, log_level: false}}
+
+      assert {:error, %Error{status: 500}} =
+               SupportDocuments.index_document(%{document: %{}}, config: config)
+
+      assert value(counter) == 1
+    end
+
+    test "the same 500 from the Client API is retried", %{config: config} do
+      counter = start_counter()
+
+      Req.Test.stub(GleanexStub, fn conn ->
+        bump(counter)
+        conn |> Plug.Conn.put_status(500) |> Req.Test.json(%{title: "Boom"})
+      end)
+
+      config = %{
+        config
+        | retry: %Gleanex.Retry{max_retries: 1, delay: fn _ -> 0 end, log_level: false}
+      }
+
+      assert {:error, %Error{status: 500}} = SupportSearch.search(%{query: "q"}, config: config)
+      assert value(counter) == 2
+    end
+
+    test "a 429 from Indexing is retried, since Glean refused it unread",
+         %{indexing_config: config} do
+      counter = start_counter()
+
+      Req.Test.stub(GleanexStub, fn conn ->
+        case bump(counter) do
+          1 -> conn |> Plug.Conn.put_status(429) |> Req.Test.json(%{title: "Too Many Requests"})
+          _ -> Req.Test.json(conn, %{})
+        end
+      end)
+
+      config = %{config | retry: %Gleanex.Retry{delay: fn _ -> 0 end, log_level: false}}
+
+      assert {:ok, _} = SupportDocuments.index_document(%{document: %{}}, config: config)
+      assert value(counter) == 2
+    end
+
+    test "an explicit condition overrides the Indexing default", %{indexing_config: config} do
+      counter = start_counter()
+
+      Req.Test.stub(GleanexStub, fn conn ->
+        bump(counter)
+        conn |> Plug.Conn.put_status(500) |> Req.Test.json(%{title: "Boom"})
+      end)
+
+      config = %{
+        config
+        | retry: %Gleanex.Retry{
+            retry: :transient,
+            max_retries: 1,
+            delay: fn _ -> 0 end,
+            log_level: false
+          }
+      }
+
+      assert {:error, %Error{status: 500}} =
+               SupportDocuments.index_document(%{document: %{}}, config: config)
+
+      assert value(counter) == 2
+    end
   end
 
   describe "api_for/1" do

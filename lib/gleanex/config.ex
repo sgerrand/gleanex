@@ -16,6 +16,25 @@ defmodule Gleanex.Config do
   Using the wrong scope fails before the request is sent, with a clear message
   rather than an opaque 401.
 
+  There are only those two families. The Platform and Admin APIs are reached
+  with a Client token, so `:client` covers three of the four.
+
+  ## Scope here is not Glean's permission scopes
+
+  `:scope` records which family of token you hold, which is all Gleanex can
+  check on its own. Glean separately puts *permission scopes* on a token, and
+  those decide which endpoints it may call. Gleanex cannot see them, so a token
+  of the right family with the wrong permissions still fails at Glean, as a 403.
+
+  The Admin API is where this bites, because a Client token that searches
+  perfectly well is not enough on its own:
+
+    * policies and reports need the `DATA_GOVERNANCE` scope, on a token
+      belonging to someone who can reach the Sensitive Content pages
+    * visibility overrides need `CONTENT_HIDING`, typically a super admin
+
+  Scopes are set when the token is created, in Glean's admin console.
+
   ## Where settings come from
 
   Highest precedence first:
@@ -250,6 +269,10 @@ defmodule Gleanex.Config do
   Only the documented hard rule is enforced: Indexing tokens work against the
   Indexing API and nothing else, and Client tokens work everywhere except the
   Indexing API.
+
+  This is about which *family* of token you hold, which is the part that can be
+  settled without asking Glean. It says nothing about whether that token carries
+  the permission scopes an endpoint needs; see the moduledoc.
   """
   @spec check_scope(t, api) :: :ok | {:error, Error.t()}
   def check_scope(%__MODULE__{scope: scope}, api) do
@@ -268,6 +291,15 @@ defmodule Gleanex.Config do
     end
   end
 
+  # Platform and Admin fall to :client deliberately, not by omission. Glean
+  # issues two families of token, Client and Indexing, and there is no third:
+  # the Admin API is Glean's Governance API, served from the same host under
+  # `/rest/api/v1` like the Client API, and its documentation says to call it
+  # with a Client API token. What Admin additionally needs is a permission scope
+  # on that token, which is a different axis; see the moduledoc.
+  #
+  # The Admin description asks for `actAsBearerToken` and `cookieAuth` and then
+  # defines neither, so it cannot settle this on its own.
   defp expected_scope(:indexing), do: :indexing
   defp expected_scope(_), do: :client
 

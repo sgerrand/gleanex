@@ -116,6 +116,13 @@ scope.
 **`test_coverage` nests the threshold under `:summary`.** A top-level
 `threshold:` is accepted without complaint and silently ignored.
 
+**Two JSON implementations are live at once.** Ordinary request and response
+bodies are encoded and decoded by `Req`, which uses Jason. Everything Gleanex
+decodes itself — `Gleanex.NDJSON`, `Gleanex.SSE.json_data/1` and the error body
+`Gleanex.Streaming` drains — uses the standard library's `JSON`, which is why
+`mix.exs` floors Elixir at 1.18. The two agree on ordinary payloads and can
+differ at the edges, so match the surrounding code rather than picking one.
+
 ## Tests
 
 Everything except `test/integration/` runs against `Req.Test` stubs.

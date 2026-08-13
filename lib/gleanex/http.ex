@@ -119,7 +119,7 @@ defmodule Gleanex.HTTP do
     ]
     |> add_query(Map.get(operation, :query))
     |> add_body(operation)
-    |> merge_options(retry_options(config, opts))
+    |> merge_options(retry_options(config, api, opts))
     |> merge_options(config.req_options)
     |> merge_options(Keyword.get(opts, :req_options, []))
     |> Req.new()
@@ -200,10 +200,13 @@ defmodule Gleanex.HTTP do
     end
   end
 
-  defp retry_options(config, opts) do
+  # The API is passed on because a policy left at `:default` means different
+  # things against different ones: Indexing is writes, where most of what looks
+  # transient may already have been applied. See `Gleanex.Retry`.
+  defp retry_options(config, api, opts) do
     opts
     |> Keyword.get(:retry, config.retry)
-    |> Gleanex.Retry.to_req_options()
+    |> Gleanex.Retry.to_req_options(api)
   end
 
   defp handle({:ok, %Req.Response{status: status} = response}, operation, _call)

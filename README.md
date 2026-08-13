@@ -121,13 +121,34 @@ response.hasMoreResults
 ## Retries and timeouts
 
 Transient failures are retried by default, honouring `Retry-After` on rate
-limits. Change the policy globally or for one call:
+limits.
+
+What counts as retryable depends on the API. Client, Platform and Admin calls
+retry the usual transient failures: HTTP 408, 429, 500, 502, 503 and 504, plus
+timeouts, refused connections and closed sockets. Indexing retries only the
+failures that say Glean never processed the request — 408, 429 and 503 — because
+a 500 or a timeout on a write means the response went missing, not that the
+write did. Retrying those can index the same batch twice.
+
+The split is by API, not by operation, so a non-idempotent write elsewhere
+(`createannouncement` is the clearest) is still retried. Set `:retry` yourself
+for those.
+
+Change the policy globally or for one call:
 
 ```elixir
 config = Gleanex.new(domain: "mycompany", token: token, retry: %Gleanex.Retry{max_retries: 5})
 
 Gleanex.search(config, "holidays", retry: Gleanex.Retry.disabled())
 Gleanex.search(config, "holidays", receive_timeout: 60_000)
+```
+
+Setting `retry` yourself applies that condition to every API, including
+Indexing. To keep the per-API behaviour and change only how often or how long,
+leave `retry` alone and set the other fields:
+
+```elixir
+%Gleanex.Retry{max_retries: 5, delay: fn _count -> 1_000 end}
 ```
 
 ## Connection pooling

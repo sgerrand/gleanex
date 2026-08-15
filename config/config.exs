@@ -1,5 +1,13 @@
 import Config
 
+# How hard the property tests try. A hundred generations is enough to keep a
+# pre-commit run honest without slowing it down; CI has the time to look
+# properly, and a chunk boundary that only breaks once in a thousand splits is
+# exactly what these tests are for.
+if config_env() == :test do
+  config :stream_data, max_runs: if(System.get_env("CI"), do: 1_000, else: 100)
+end
+
 # Code generation settings for `mix glean.gen`. Nothing here affects Gleanex at
 # runtime; users configure the library under the `:gleanex` key instead.
 #

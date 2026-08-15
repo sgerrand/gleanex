@@ -81,6 +81,12 @@ defmodule Gleanex.MixProject do
       {:telemetry, "~> 1.2"},
       # Req.Test builds its stubs on Plug.Conn.
       {:plug, "~> 1.16", only: :test},
+      # Property tests for Gleanex.Framing, where the thing worth checking is
+      # that no chunk boundary changes the result, and the boundaries worth
+      # trying are the ones nobody thinks to write down. In :dev as well as
+      # :test because .formatter.exs imports its `check all` and `gen all`
+      # syntax, and `mix format` runs in :dev.
+      {:stream_data, "~> 1.4", only: [:dev, :test]},
       {:oapi_generator, "~> 0.4", only: :dev, runtime: false},
       {:yaml_elixir, "~> 2.9", only: [:dev, :test], runtime: false},
       {:ex_doc, "~> 0.34", only: :dev, runtime: false},

@@ -227,6 +227,28 @@ Gleanex.Bulk.upload(
 )
 ```
 
+Only the page count comes back, so a long upload is otherwise silent. `:each`
+runs after every page Glean accepts, with that page's response and a map
+describing it:
+
+```elixir
+Gleanex.Bulk.upload(
+  indexing_config,
+  &Gleanex.Indexing.Documents.bulkindexdocuments/2,
+  %{datasource: "mydatasource"},
+  :documents,
+  documents,
+  page_size: 500,
+  each: fn _response, page ->
+    Logger.info("uploaded page #{page.page}, #{page.records} documents")
+  end
+)
+```
+
+Pass your own `:upload_id` if you want to be able to resume. The generated one
+reaches `:each` and nothing else, so an upload that fails on its first page
+takes its ID with it.
+
 ## Telemetry
 
 Every request emits a `[:gleanex, :request]` span with `:api`, `:operation`,

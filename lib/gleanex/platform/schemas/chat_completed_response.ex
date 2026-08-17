@@ -25,10 +25,10 @@ defmodule Gleanex.Platform.ChatCompletedResponse do
       conversation_id: :string,
       created_at: {:string, "date-time"},
       id: :string,
-      object: {:const, "response"},
+      object: {:const, "RESPONSE"},
       output: [{Gleanex.Platform.ChatOutputMessage, :t}],
       request_id: :string,
-      status: {:const, "completed"},
+      status: {:const, "COMPLETED"},
       store: :boolean
     ]
   end

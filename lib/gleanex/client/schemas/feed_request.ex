@@ -64,7 +64,8 @@ defmodule Gleanex.Client.FeedRequest do
           "DEMO_CARD",
           "OOO_PLANNER",
           "OOO_CATCH_UP",
-          "ADMIN_HEALTH_CENTER"
+          "ADMIN_HEALTH_CENTER",
+          "KNOWLEDGE_GAP"
         ]
       ],
       requestOptions: {Gleanex.Client.FeedRequestOptions, :t},

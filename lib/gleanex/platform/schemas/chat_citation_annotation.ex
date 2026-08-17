@@ -35,7 +35,7 @@ defmodule Gleanex.Platform.ChatCitationAnnotation do
         ]
       ],
       start_index: :integer,
-      type: {:const, "citation"}
+      type: {:const, "CITATION"}
     ]
   end
 end

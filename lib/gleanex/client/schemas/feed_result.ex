@@ -66,9 +66,10 @@ defmodule Gleanex.Client.FeedResult do
            "DEMO_CARD",
            "OOO_PLANNER",
            "OOO_CATCH_UP",
-           "ADMIN_HEALTH_CENTER"
+           "ADMIN_HEALTH_CENTER",
+           "KNOWLEDGE_GAP"
          ]},
-      placementReason: {:enum, ["ORGANIC", "PROMO"]},
+      placementReason: {:enum, ["ORGANIC", "PROMO", "PINNED"]},
       primaryEntry: {Gleanex.Client.FeedEntry, :t},
       rank: :integer,
       secondaryEntries: [{Gleanex.Client.FeedEntry, :t}]

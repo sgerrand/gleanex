@@ -132,7 +132,8 @@ defmodule Gleanex.Client.FeedEntry do
            "DEMO_CARD",
            "OOO_PLANNER",
            "OOO_CATCH_UP",
-           "ADMIN_HEALTH_CENTER"
+           "ADMIN_HEALTH_CENTER",
+           "KNOWLEDGE_GAP"
          ]},
       person: {Gleanex.Client.Person, :t},
       promptTemplate: {Gleanex.Client.PromptTemplateResult, :t},

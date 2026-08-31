@@ -1,8 +1,8 @@
-openapi: 3.0.0
+openapi: 3.1.0
 info:
   version: '2026-04-01'
   title: Glean Platform API
-  x-source-commit-sha: b85d08259cae10cc2b68c7724c1c4898aeeadfad
+  x-source-commit-sha: 4ed59b10dea0428299af236c9f0db8544186e3da
 servers:
   - url: https://{domain}-be.glean.com/api
     variables:
@@ -24,9 +24,6 @@ paths:
       x-glean-sdk:
         group: agents
         method: search
-      x-glean-experimental:
-        id: 4abc1e17-8e06-490b-99a7-e8f97592405a
-        introduced: '2026-05-12'
       x-codegen-request-body-name: payload
       requestBody:
         required: true
@@ -71,9 +68,6 @@ paths:
       x-glean-sdk:
         group: agents
         method: get
-      x-glean-experimental:
-        id: 009b3e94-694b-4deb-b80a-c67011173715
-        introduced: '2026-05-12'
       parameters:
         - in: path
           name: agent_id
@@ -117,9 +111,6 @@ paths:
       x-glean-sdk:
         group: agents
         method: getSchemas
-      x-glean-experimental:
-        id: b40b4dd3-3839-48e6-9e45-7e63e8148b49
-        introduced: '2026-05-12'
       parameters:
         - in: path
           name: agent_id
@@ -170,9 +161,6 @@ paths:
       x-glean-sdk:
         group: agents
         method: createRun
-      x-glean-experimental:
-        id: 26bba669-2e92-4e5d-9798-6a532fae4e9f
-        introduced: '2026-05-12'
       x-codegen-request-body-name: payload
       parameters:
         - in: path
@@ -198,7 +186,8 @@ paths:
             text/event-stream:
               schema:
                 type: string
-                description: Server-sent events emitted by the running agent.
+                description: |
+                  Server-sent events emitted by the running agent. Successful runs emit `message` events. A terminal failure after the stream has started emits exactly one `run.failed` event whose `data` is an `AgentRunFailedEventData` payload, then closes.
                 example: |
                   id: 1
                   event: message
@@ -207,6 +196,10 @@ paths:
                   id: 2
                   event: message
                   data: {"messages":[{"role":"GLEAN_AI","content":[{"text":", I can help with HR policy questions.","type":"text"}]}]}
+
+                  id: 3
+                  event: run.failed
+                  data: {"error":{"type":"https://developers.glean.com/errors/spend-limit-exceeded","title":"Spend Limit Exceeded","status":403,"detail":"You've reached the monthly limit set by your admin.","code":"spend_limit_exceeded","request_id":"req_123","documentation_url":"https://developers.glean.com/errors/spend-limit-exceeded"}}
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -269,20 +262,24 @@ paths:
                   Server-sent events for a streaming chat run. Event payloads are documented under ChatStream* schemas.
                 example: |
                   id: 1
-                  event: response.created
-                  data: {"type":"response.created","response_id":"resp_e65a0a77-97a2-4c91-be60-eae7f6238015"}
+                  event: RESPONSE_CREATED
+                  data: {"type":"RESPONSE_CREATED","response_id":"resp_e65a0a77-97a2-4c91-be60-eae7f6238015"}
 
                   id: 2
-                  event: response.output_text.delta
-                  data: {"type":"response.output_text.delta","response_id":"resp_e65a0a77-97a2-4c91-be60-eae7f6238015","delta":"Hello"}
+                  event: RESPONSE_PROGRESS
+                  data: {"type":"RESPONSE_PROGRESS","response_id":"resp_e65a0a77-97a2-4c91-be60-eae7f6238015","text":"**Searching:** foo"}
 
                   id: 3
-                  event: response.output_text.done
-                  data: {"type":"response.output_text.done","response_id":"resp_e65a0a77-97a2-4c91-be60-eae7f6238015","text":"Hello"}
+                  event: RESPONSE_OUTPUT_TEXT_DELTA
+                  data: {"type":"RESPONSE_OUTPUT_TEXT_DELTA","response_id":"resp_e65a0a77-97a2-4c91-be60-eae7f6238015","delta":"Hello"}
 
                   id: 4
-                  event: response.completed
-                  data: {"type":"response.completed","response_id":"resp_e65a0a77-97a2-4c91-be60-eae7f6238015","response":{"id":"resp_e65a0a77-97a2-4c91-be60-eae7f6238015","object":"response","status":"completed","output":[{"type":"message","role":"assistant","content":[{"type":"output_text","text":"Hello"}]}],"store":true,"request_id":"req_123","created_at":"2026-07-14T20:00:00Z"}}
+                  event: RESPONSE_OUTPUT_TEXT_DONE
+                  data: {"type":"RESPONSE_OUTPUT_TEXT_DONE","response_id":"resp_e65a0a77-97a2-4c91-be60-eae7f6238015","text":"Hello"}
+
+                  id: 5
+                  event: RESPONSE_COMPLETED
+                  data: {"type":"RESPONSE_COMPLETED","response_id":"resp_e65a0a77-97a2-4c91-be60-eae7f6238015","response":{"id":"resp_e65a0a77-97a2-4c91-be60-eae7f6238015","object":"RESPONSE","status":"COMPLETED","output":[{"type":"MESSAGE","role":"ASSISTANT","content":[{"type":"OUTPUT_TEXT","text":"Hello"}]}],"store":true,"request_id":"req_123","created_at":"2026-07-14T20:00:00Z"}}
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -397,6 +394,53 @@ paths:
           $ref: '#/components/responses/NotFound'
         '408':
           $ref: '#/components/responses/RequestTimeout'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /skills/import:
+    post:
+      tags:
+        - Skills
+      summary: Import skills from GitHub
+      description: |
+        Import one or more skills selected from a GitHub source preview. Each source URL is fetched and persisted as an independent skill with source provenance. This operation does not create a durable source resource. The import is atomic: if any source cannot be fetched, validated, or persisted, no skills are created.
+      operationId: platform-skills-import
+      x-visibility: Public
+      x-glean-sdk:
+        group: skills
+        method: import
+      x-glean-experimental:
+        id: 9162d790-e101-437d-a9a0-25e4687d150b
+        introduced: '2026-07-28'
+      x-codegen-request-body-name: request
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SkillImportRequest'
+      responses:
+        '200':
+          description: Skills imported successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SkillImportResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '408':
+          $ref: '#/components/responses/RequestTimeout'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '413':
+          $ref: '#/components/responses/RequestTooLarge'
         '429':
           $ref: '#/components/responses/TooManyRequests'
         '500':
@@ -569,6 +613,47 @@ paths:
           $ref: '#/components/responses/InternalServerError'
         '503':
           $ref: '#/components/responses/ServiceUnavailable'
+    delete:
+      tags:
+        - Skills
+      summary: Delete skill
+      description: |
+        Delete a skill the authenticated caller is allowed to manage. This operation permanently removes all versions of the skill.
+      operationId: platform-skills-delete
+      x-visibility: Public
+      x-glean-sdk:
+        group: skills
+        method: delete
+      x-glean-experimental:
+        id: c4351fd0-4d28-4ad4-ab93-587ca4778173
+        introduced: '2026-07-31'
+      parameters:
+        - name: skill_id
+          in: path
+          required: true
+          description: Glean skill ID.
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        '204':
+          description: Skill deleted. No content.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '408':
+          $ref: '#/components/responses/RequestTimeout'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
     get:
       tags:
         - Skills
@@ -660,6 +745,56 @@ paths:
           $ref: '#/components/responses/NotFound'
         '408':
           $ref: '#/components/responses/RequestTimeout'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /skills/{skill_id}/sync:
+    post:
+      tags:
+        - Skills
+      summary: Sync a GitHub-imported skill
+      description: |
+        Refresh one GitHub-imported skill from its stored source URL. If the skill content has changed, this operation creates a new skill version. If the skill is no longer present upstream, the stored skill is left unchanged and must be deleted explicitly.
+      operationId: platform-skills-sync
+      x-visibility: Public
+      x-glean-sdk:
+        group: skills
+        method: sync
+      x-glean-experimental:
+        id: 568aa3f8-2af8-449c-9e4f-818ed4b877ef
+        introduced: '2026-08-03'
+      parameters:
+        - name: skill_id
+          in: path
+          required: true
+          description: ID of the GitHub-imported skill to sync.
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        '200':
+          description: Skill sync completed successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SkillSyncResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '408':
+          $ref: '#/components/responses/RequestTimeout'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '413':
+          $ref: '#/components/responses/RequestTooLarge'
         '429':
           $ref: '#/components/responses/TooManyRequests'
         '500':
@@ -1011,6 +1146,557 @@ paths:
           $ref: '#/components/responses/InternalServerError'
         '503':
           $ref: '#/components/responses/ServiceUnavailable'
+  /triggers:
+    post:
+      tags:
+        - Triggers
+      summary: Create trigger
+      description: |
+        Create a trigger from a preset and return it with its signing secret.
+      operationId: platform-triggers-create
+      x-visibility: Public
+      x-glean-sdk:
+        group: triggers
+        method: create
+      x-glean-experimental:
+        id: eb175f18-74e6-4c9c-ba02-23bcc9018fc9
+        introduced: '2026-07-06'
+      x-codegen-request-body-name: payload
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TriggerCreateRequest'
+      callbacks:
+        triggerEvent:
+          '{$request.body#/delivery/webhook_url}':
+            post:
+              tags:
+                - Triggers
+              summary: Receive a trigger event
+              description: Delivery uses at-least-once semantics, so the same event can be sent more than once. Return any 2xx status after accepting the event. Network failures, 408, 429, and 5xx responses are retried; other non-2xx responses, including redirects, are terminal. The `webhook-id` remains stable across attempts and can be used for deduplication, while `webhook-timestamp` and `webhook-signature` are generated for each attempt.
+              operationId: trigger-webhook-event
+              security:
+                - {}
+                - TriggerWebhookBearerAuth: []
+              parameters:
+                - $ref: '#/components/parameters/TriggerWebhookId'
+                - $ref: '#/components/parameters/TriggerWebhookTimestamp'
+                - $ref: '#/components/parameters/TriggerWebhookSignature'
+              requestBody:
+                required: true
+                content:
+                  application/json:
+                    schema:
+                      $ref: '#/components/schemas/TriggerWebhookEvent'
+              responses:
+                '408':
+                  description: Request timeout. Glean retries the delivery.
+                '429':
+                  description: Rate limited. Glean retries the delivery.
+                2XX:
+                  description: Event accepted. Glean does not retry the delivery.
+                3XX:
+                  description: Redirects are not followed and the delivery is not retried.
+                4XX:
+                  description: Client error other than 408 or 429. Glean does not retry.
+                5XX:
+                  description: Server error. Glean retries the delivery.
+      responses:
+        '201':
+          description: Trigger created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TriggerCreateResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '408':
+          $ref: '#/components/responses/RequestTimeout'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '413':
+          $ref: '#/components/responses/RequestTooLarge'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+    get:
+      tags:
+        - Triggers
+      summary: List triggers
+      description: |
+        List triggers owned by the authenticated caller.
+      operationId: platform-triggers-list
+      x-visibility: Public
+      x-glean-sdk:
+        group: triggers
+        method: list
+      x-glean-experimental:
+        id: e3554987-e043-4561-889a-a1117b1bce06
+        introduced: '2026-07-06'
+      parameters:
+        - in: query
+          name: page_size
+          description: Maximum number of triggers to return.
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - in: query
+          name: cursor
+          description: Opaque pagination cursor from a previous response.
+          required: false
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TriggerListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '408':
+          $ref: '#/components/responses/RequestTimeout'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /triggers/{trigger_id}:
+    get:
+      tags:
+        - Triggers
+      summary: Get trigger
+      description: |
+        Retrieve a trigger owned by the authenticated caller.
+      operationId: platform-triggers-get
+      x-visibility: Public
+      x-glean-sdk:
+        group: triggers
+        method: get
+      x-glean-experimental:
+        id: 46de62cb-ba31-4f71-9646-649c1d604816
+        introduced: '2026-07-06'
+      parameters:
+        - in: path
+          name: trigger_id
+          description: ID of the trigger to retrieve.
+          required: true
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TriggerGetResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '408':
+          $ref: '#/components/responses/RequestTimeout'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+    patch:
+      tags:
+        - Triggers
+      summary: Update trigger
+      description: |
+        Update a trigger.
+      operationId: platform-triggers-update
+      x-visibility: Public
+      x-glean-sdk:
+        group: triggers
+        method: update
+      x-glean-experimental:
+        id: 3eb4c709-bd5c-4019-b913-0db36c766350
+        introduced: '2026-07-06'
+      x-codegen-request-body-name: payload
+      parameters:
+        - in: path
+          name: trigger_id
+          description: ID of the trigger to update.
+          required: true
+          schema:
+            type: string
+            minLength: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TriggerUpdateRequest'
+      responses:
+        '200':
+          description: Trigger updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TriggerGetResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '408':
+          $ref: '#/components/responses/RequestTimeout'
+        '413':
+          $ref: '#/components/responses/RequestTooLarge'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+    delete:
+      tags:
+        - Triggers
+      summary: Delete trigger
+      description: |
+        Delete a trigger.
+      operationId: platform-triggers-delete
+      x-visibility: Public
+      x-glean-sdk:
+        group: triggers
+        method: delete
+      x-glean-experimental:
+        id: e6564ed7-8b4b-4708-918b-eed97110859f
+        introduced: '2026-07-06'
+      parameters:
+        - in: path
+          name: trigger_id
+          description: ID of the trigger to delete.
+          required: true
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        '204':
+          description: Trigger deleted. No content.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '408':
+          $ref: '#/components/responses/RequestTimeout'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /triggers/{trigger_id}/events/search:
+    post:
+      tags:
+        - Triggers
+      summary: Search events for a trigger
+      description: |
+        Search recent content events an existing trigger matches. Read-only — no webhook delivery is made. Covers the last seven days.
+      operationId: platform-triggers-events-search
+      x-visibility: Public
+      x-glean-sdk:
+        group: triggers
+        method: searchEvents
+      x-glean-experimental:
+        id: c734a377-3dec-4ee2-9ec5-3848a8384f03
+        introduced: '2026-08-07'
+      parameters:
+        - in: path
+          name: trigger_id
+          description: ID of the trigger whose events to search.
+          required: true
+          schema:
+            type: string
+            minLength: 1
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TriggerEventSearchRequest'
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TriggerEventSearchResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '408':
+          $ref: '#/components/responses/RequestTimeout'
+        '413':
+          $ref: '#/components/responses/RequestTooLarge'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /trigger-presets:
+    get:
+      tags:
+        - Triggers
+      summary: List trigger presets
+      description: |
+        List the trigger presets available to the caller. A preset is a curated content-trigger template (e.g. a new Jira ticket) which is passed when creating a trigger.
+      operationId: platform-trigger-presets-list
+      x-visibility: Public
+      x-glean-sdk:
+        group: triggers
+        method: listPresets
+      x-glean-experimental:
+        id: f5b16196-0d4c-42f0-89bf-40313398728e
+        introduced: '2026-07-22'
+      parameters:
+        - in: query
+          name: datasource
+          description: Restrict results to presets for a single datasource (e.g. github).
+          required: false
+          schema:
+            type: string
+            minLength: 1
+        - in: query
+          name: page_size
+          description: Maximum number of presets to return.
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - in: query
+          name: cursor
+          description: Opaque pagination cursor from a previous response.
+          required: false
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TriggerPresetListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '408':
+          $ref: '#/components/responses/RequestTimeout'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /trigger-presets/{preset_id}:
+    get:
+      tags:
+        - Triggers
+      summary: Get trigger preset
+      description: |
+        Retrieve a single trigger preset by id.
+      operationId: platform-trigger-presets-get
+      x-visibility: Public
+      x-glean-sdk:
+        group: triggers
+        method: getPreset
+      x-glean-experimental:
+        id: 5277167d-909b-4eee-95d1-8958b07016bb
+        introduced: '2026-07-22'
+      parameters:
+        - in: path
+          name: preset_id
+          description: ID of the preset to retrieve.
+          required: true
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TriggerPresetGetResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '408':
+          $ref: '#/components/responses/RequestTimeout'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /trigger-presets/{preset_id}/input-values:
+    get:
+      tags:
+        - Triggers
+      summary: Search trigger preset input values
+      description: |
+        Return up to 300 selectable values for a single picklist input on a preset. Results are intended for typeahead selection and are not cursor-paginated. When `is_truncated` is true, refine `query` to narrow the result set.
+      operationId: platform-trigger-presets-input-values-list
+      x-visibility: Public
+      x-glean-sdk:
+        group: triggers
+        method: listPresetInputValues
+      x-glean-experimental:
+        id: 24c5675d-a57a-48cb-9d71-3dece296f28c
+        introduced: '2026-08-06'
+      parameters:
+        - in: path
+          name: preset_id
+          description: ID of the preset the input belongs to.
+          required: true
+          schema:
+            type: string
+            minLength: 1
+        - in: query
+          name: field
+          description: Field identifier of the input whose values to list.
+          required: true
+          schema:
+            type: string
+            minLength: 1
+        - in: query
+          name: query
+          description: |
+            Prefix filter over the input's option values, for typeahead. Matching is on the option value, not its display name.
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TriggerPresetInputValueListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '408':
+          $ref: '#/components/responses/RequestTimeout'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /trigger-presets/{preset_id}/events/search:
+    post:
+      tags:
+        - Triggers
+      summary: Search events for a trigger preset
+      description: |
+        Search recent content events an unsaved trigger built from this preset would match, to preview it before creating the trigger. Read-only — no trigger is created and no webhook delivery is made. Covers the last seven days.
+      operationId: platform-trigger-presets-events-search
+      x-visibility: Public
+      x-glean-sdk:
+        group: triggers
+        method: searchPresetEvents
+      x-glean-experimental:
+        id: a48efd80-78d6-46de-9f23-5b8c63ecd157
+        introduced: '2026-08-12'
+      parameters:
+        - in: path
+          name: preset_id
+          description: ID of the preset to preview.
+          required: true
+          schema:
+            type: string
+            minLength: 1
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TriggerPresetEventSearchRequest'
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TriggerEventSearchResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '408':
+          $ref: '#/components/responses/RequestTimeout'
+        '413':
+          $ref: '#/components/responses/RequestTooLarge'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
 components:
   securitySchemes:
     ApiToken:
@@ -1022,6 +1708,8 @@ components:
     AgentsSearchRequest:
       type: object
       additionalProperties: false
+      example:
+        name: HR Policy Agent
       properties:
         name:
           type: string
@@ -1089,10 +1777,12 @@ components:
         - authentication_required
         - token_expired
         - insufficient_permissions
+        - spend_limit_exceeded
         - resource_not_found
         - method_not_allowed
         - request_timeout
         - request_too_large
+        - token_limit_exceeded
         - conflict
         - gone
         - unprocessable_query
@@ -1131,6 +1821,9 @@ components:
         insufficient_permissions:
           status: 403
           title: Insufficient Permissions
+        spend_limit_exceeded:
+          status: 403
+          title: Spend Limit Exceeded
         resource_not_found:
           status: 404
           title: Resource Not Found
@@ -1143,6 +1836,9 @@ components:
         request_too_large:
           status: 413
           title: Request Too Large
+        token_limit_exceeded:
+          status: 413
+          title: Token Limit Exceeded
         conflict:
           status: 409
           title: Conflict
@@ -1337,6 +2033,12 @@ components:
       additionalProperties: false
       description: |
         Request to run an agent. A request MUST supply either `messages` (a non-empty conversation) or `input` (for input-form triggered agents).
+      example:
+        messages:
+          - role: USER
+            content:
+              - text: What is our parental leave policy?
+                type: text
       properties:
         input:
           type: object
@@ -1443,8 +2145,8 @@ components:
         role:
           type: string
           enum:
-            - user
-            - assistant
+            - USER
+            - ASSISTANT
         content:
           type: string
           minLength: 1
@@ -1453,10 +2155,12 @@ components:
       additionalProperties: false
       required:
         - input
+      example:
+        input: What is our parental leave policy?
       properties:
         input:
           description: |
-            Either a plain string (single user turn) or a chronological array of `user`/`assistant` messages. The final array message must be `user`.
+            Either a plain string (single user turn) or a chronological array of `USER`/`ASSISTANT` messages. The final array message must be `USER`.
           oneOf:
             - type: string
               minLength: 1
@@ -1494,7 +2198,7 @@ components:
         type:
           type: string
           enum:
-            - document
+            - DOCUMENT
         document_id:
           type: string
           minLength: 1
@@ -1520,7 +2224,7 @@ components:
         type:
           type: string
           enum:
-            - person
+            - PERSON
         person_id:
           type: string
           minLength: 1
@@ -1538,7 +2242,7 @@ components:
         type:
           type: string
           enum:
-            - file
+            - FILE
         file_id:
           type: string
           minLength: 1
@@ -1558,7 +2262,7 @@ components:
         type:
           type: string
           enum:
-            - custom_entity
+            - CUSTOM_ENTITY
         entity_id:
           type: string
           minLength: 1
@@ -1580,10 +2284,10 @@ components:
       discriminator:
         propertyName: type
         mapping:
-          document: '#/components/schemas/ChatDocumentSource'
-          person: '#/components/schemas/ChatPersonSource'
-          file: '#/components/schemas/ChatFileSource'
-          custom_entity: '#/components/schemas/ChatCustomEntitySource'
+          DOCUMENT: '#/components/schemas/ChatDocumentSource'
+          PERSON: '#/components/schemas/ChatPersonSource'
+          FILE: '#/components/schemas/ChatFileSource'
+          CUSTOM_ENTITY: '#/components/schemas/ChatCustomEntitySource'
     ChatCitationSnippet:
       type: object
       additionalProperties: false
@@ -1594,8 +2298,9 @@ components:
           type: string
           minLength: 1
         page_number:
-          type: integer
-          nullable: true
+          type:
+            - integer
+            - 'null'
     ChatCitationAnnotation:
       type: object
       additionalProperties: false
@@ -1606,23 +2311,26 @@ components:
         type:
           type: string
           enum:
-            - citation
+            - CITATION
         sources:
           type: array
           minItems: 1
           items:
             $ref: '#/components/schemas/ChatCitationSource'
         start_index:
-          type: integer
+          type:
+            - integer
+            - 'null'
           minimum: 0
-          nullable: true
         end_index:
-          type: integer
+          type:
+            - integer
+            - 'null'
           minimum: 0
-          nullable: true
         snippets:
-          type: array
-          nullable: true
+          type:
+            - array
+            - 'null'
           items:
             $ref: '#/components/schemas/ChatCitationSnippet'
     ChatOutputTextContent:
@@ -1635,7 +2343,7 @@ components:
         type:
           type: string
           enum:
-            - output_text
+            - OUTPUT_TEXT
         text:
           type: string
         annotations:
@@ -1653,11 +2361,11 @@ components:
         type:
           type: string
           enum:
-            - message
+            - MESSAGE
         role:
           type: string
           enum:
-            - assistant
+            - ASSISTANT
         content:
           type: array
           minItems: 1
@@ -1681,7 +2389,7 @@ components:
         object:
           type: string
           enum:
-            - response
+            - RESPONSE
         created_at:
           type: string
           format: date-time
@@ -1689,7 +2397,7 @@ components:
         status:
           type: string
           enum:
-            - completed
+            - COMPLETED
         output:
           type: array
           minItems: 1
@@ -1699,9 +2407,10 @@ components:
         store:
           type: boolean
         conversation_id:
-          type: string
+          type:
+            - string
+            - 'null'
           minLength: 1
-          nullable: true
           description: Present when the interaction was persisted.
         request_id:
           type: string
@@ -1821,8 +2530,9 @@ components:
           type: boolean
           description: Whether additional results are available.
         next_cursor:
-          type: string
-          nullable: true
+          type:
+            - string
+            - 'null'
           description: Cursor for the next page, or null when no more results are available.
         request_id:
           type: string
@@ -1845,6 +2555,40 @@ components:
       properties:
         skill:
           $ref: '#/components/schemas/Skill'
+        request_id:
+          type: string
+          description: Platform-generated request ID for support correlation.
+    SkillImportRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - source_urls
+      example:
+        source_urls:
+          - https://github.com/anthropics/skills/tree/main/skills/skill-creator
+      properties:
+        source_urls:
+          type: array
+          minItems: 1
+          maxItems: 100
+          uniqueItems: true
+          description: Resolved GitHub skill URLs selected from a source preview.
+          items:
+            type: string
+            minLength: 1
+            maxLength: 2048
+    SkillImportResponse:
+      type: object
+      required:
+        - skills
+        - request_id
+      properties:
+        skills:
+          type: array
+          minItems: 1
+          description: Independently persisted skills in request order.
+          items:
+            $ref: '#/components/schemas/Skill'
         request_id:
           type: string
           description: Platform-generated request ID for support correlation.
@@ -1932,6 +2676,8 @@ components:
       additionalProperties: false
       required:
         - source_url
+      example:
+        source_url: https://github.com/anthropics/skills
       properties:
         source_url:
           type: string
@@ -2054,6 +2800,8 @@ components:
       additionalProperties: false
       required:
         - status
+      example:
+        status: ENABLED
       properties:
         status:
           $ref: '#/components/schemas/SkillUpdateStatus'
@@ -2065,6 +2813,31 @@ components:
       properties:
         skill:
           $ref: '#/components/schemas/Skill'
+        request_id:
+          type: string
+          description: Platform-generated request ID for support correlation.
+    SkillSyncResultStatus:
+      type: string
+      enum:
+        - UP_TO_DATE
+      description: Synchronization status after a successful refresh.
+    SkillSyncResponse:
+      type: object
+      required:
+        - sync_status
+        - commit_sha
+        - updated
+        - request_id
+      properties:
+        sync_status:
+          $ref: '#/components/schemas/SkillSyncResultStatus'
+        commit_sha:
+          type: string
+          minLength: 1
+          description: Git commit SHA now associated with the skill.
+        updated:
+          type: boolean
+          description: Whether this request created a new skill version.
         request_id:
           type: string
           description: Platform-generated request ID for support correlation.
@@ -2120,8 +2893,9 @@ components:
           type: boolean
           description: Whether additional results are available.
         next_cursor:
-          type: string
-          nullable: true
+          type:
+            - string
+            - 'null'
           description: Cursor for the next page, or null when no more results are available.
         request_id:
           type: string
@@ -2240,8 +3014,9 @@ components:
           default: 10
           description: Number of results to return per page.
         cursor:
-          type: string
-          nullable: true
+          type:
+            - string
+            - 'null'
           description: |
             Opaque pagination token from a previous response's `next_cursor` field. Omit on the first request.
         datasources:
@@ -2294,8 +3069,9 @@ components:
           description: The datasource this result originates from.
           example: confluence
         document_type:
-          type: string
-          nullable: true
+          type:
+            - string
+            - 'null'
           minLength: 1
           description: The document type within the datasource.
           example: page
@@ -2304,14 +3080,16 @@ components:
         owner:
           $ref: '#/components/schemas/PersonReference'
         updated_at:
-          type: string
+          type:
+            - string
+            - 'null'
           format: date-time
-          nullable: true
           description: When the result was last modified.
         created_at:
-          type: string
+          type:
+            - string
+            - 'null'
           format: date-time
-          nullable: true
           description: When the result was created.
     SearchResponse:
       type: object
@@ -2333,8 +3111,9 @@ components:
           type: boolean
           description: Indicates whether additional pages of results are available.
         next_cursor:
-          type: string
-          nullable: true
+          type:
+            - string
+            - 'null'
           description: Opaque token to pass as `cursor` in the next request.
         request_id:
           type: string
@@ -2415,6 +3194,569 @@ components:
           type: string
           minLength: 1
           description: Platform-generated request ID for support correlation.
+    TriggerStatus:
+      type: string
+      description: Current trigger lifecycle state.
+      example: ENABLED
+      enum:
+        - ENABLED
+        - DISABLED
+    TriggerAuth:
+      type: object
+      additionalProperties: false
+      required:
+        - type
+        - secret
+      description: Optional caller credential sent as an HTTP auth header on each delivery, in addition to the HMAC signature. Lets the receiving endpoint authenticate the request. On update, omit `auth` to preserve the existing credential; there is no in-place removal — recreate the trigger to remove auth.
+      properties:
+        type:
+          type: string
+          description: Credential scheme.
+          enum:
+            - BEARER
+        secret:
+          type: string
+          writeOnly: true
+          description: Secret credential value. Write-only; never returned on reads.
+          example: secret_test_123
+    TriggerDelivery:
+      type: object
+      additionalProperties: false
+      required:
+        - webhook_url
+      properties:
+        webhook_url:
+          type: string
+          format: uri
+          pattern: ^https://
+          description: HTTPS URL that signed events are delivered to.
+          example: https://customer.app/webhook
+        auth:
+          $ref: '#/components/schemas/TriggerAuth'
+    Trigger:
+      type: object
+      required:
+        - trigger_id
+        - preset_id
+        - status
+        - delivery
+        - created_at
+        - updated_at
+      properties:
+        trigger_id:
+          type: string
+          description: ID of the trigger.
+          example: trigger_test_123
+        preset_id:
+          type: string
+          description: ID of the preset this trigger was created from.
+          example: GITHUB_1
+        description:
+          type: string
+          description: Optional caller-supplied note describing this trigger.
+          example: Reviews I am tagged on, sent to my team's review channel
+        status:
+          $ref: '#/components/schemas/TriggerStatus'
+        inputs:
+          type: object
+          additionalProperties: true
+          description: Values supplied for the preset's inputs.
+          example:
+            repository: acme/payments-api
+        delivery:
+          $ref: '#/components/schemas/TriggerDelivery'
+        created_at:
+          type: string
+          format: date-time
+          description: Time the trigger was created.
+        updated_at:
+          type: string
+          format: date-time
+          description: Time the trigger was last updated.
+    TriggerListResponse:
+      type: object
+      required:
+        - results
+        - has_more
+        - next_cursor
+        - request_id
+      properties:
+        results:
+          type: array
+          description: Triggers owned by the caller.
+          items:
+            $ref: '#/components/schemas/Trigger'
+        has_more:
+          type: boolean
+          description: Whether additional results are available.
+        next_cursor:
+          type:
+            - string
+            - 'null'
+          description: Cursor for the next page, or null when no more results are available.
+        request_id:
+          type: string
+          description: Platform-generated request ID for support correlation.
+    TriggerCreateRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - preset_id
+        - delivery
+      properties:
+        preset_id:
+          type: string
+          description: ID of the preset to instantiate.
+          example: GITHUB_1
+        description:
+          type: string
+          description: Optional note describing this trigger.
+          example: Reviews I am tagged on, sent to my team's review channel
+        inputs:
+          type: object
+          additionalProperties: true
+          description: Values for the preset's inputs.
+          example:
+            repository: acme/payments-api
+        delivery:
+          $ref: '#/components/schemas/TriggerDelivery'
+    TriggerWithSecret:
+      allOf:
+        - $ref: '#/components/schemas/Trigger'
+        - type: object
+          required:
+            - signing_secret
+          properties:
+            signing_secret:
+              type: string
+              pattern: ^whsec_[A-Za-z0-9+/=]+$
+              example: whsec_xxx
+              description: Secret for verifying webhook signatures, serialized as `whsec_<base64-encoded key>` following Standard Webhooks. Returned only when the trigger is created and cannot be retrieved later. Store it securely.
+    TriggerCreateResponse:
+      type: object
+      required:
+        - trigger
+        - request_id
+      properties:
+        trigger:
+          $ref: '#/components/schemas/TriggerWithSecret'
+        request_id:
+          type: string
+          description: Platform-generated request ID for support correlation.
+    TriggerWebhookEventBase:
+      type: object
+      required:
+        - version
+        - trigger_id
+        - event_type
+        - datasource
+        - reason
+        - doc_type
+        - doc_id
+        - view_url
+        - title
+      properties:
+        version:
+          type: string
+          description: Webhook payload schema version.
+          pattern: ^1$
+        trigger_id:
+          type: string
+          description: ID of the Platform trigger that produced the event.
+          example: trigger_test_123
+        event_type:
+          type: string
+          description: Kind of trigger event.
+        datasource:
+          type: string
+          description: Datasource the event originated from.
+          example: GITHUB
+        reason:
+          type: string
+          description: Why the event fired.
+          example: REVIEW_REQUESTED
+        doc_type:
+          type: string
+          description: Datasource-specific object type.
+          example: pull
+        doc_id:
+          type: string
+          description: Identifier of the document the event is about.
+          example: GITHUB_pull_123
+        view_url:
+          type: string
+          description: Link to the document in its source system.
+          example: https://github.com/acme/payments-api/pull/123
+        title:
+          type: string
+          description: Title of the document, or the subject for email.
+          example: 'Bug: login fails on Safari'
+        event_time:
+          type: string
+          format: date-time
+          description: Relevant event time. Document changes use the source-observed time when available and otherwise the document ingestion time; content schedules use the scheduled time. Omitted when no timestamp is available.
+    DocumentChangeWebhookEvent:
+      allOf:
+        - $ref: '#/components/schemas/TriggerWebhookEventBase'
+        - type: object
+          required:
+            - event_type
+          properties:
+            event_type:
+              type: string
+              pattern: ^DOCUMENT_CHANGE$
+            content:
+              type: string
+              description: Email body content when the event is for an email document.
+            content_truncated:
+              type: boolean
+              description: Present and true when source content exceeded the delivery size limit.
+      example:
+        version: '1'
+        trigger_id: trigger_test_123
+        event_type: DOCUMENT_CHANGE
+        datasource: GITHUB
+        reason: REVIEW_REQUESTED
+        doc_type: pull
+        doc_id: GITHUB_pull_123
+        view_url: https://github.com/acme/payments-api/pull/123
+        title: Add retry backoff to the crawler
+        event_time: '2025-04-23T11:00:00Z'
+    ContentScheduleWebhookEvent:
+      allOf:
+        - $ref: '#/components/schemas/TriggerWebhookEventBase'
+        - type: object
+          required:
+            - event_type
+            - time_offset_seconds
+          properties:
+            event_type:
+              type: string
+              pattern: ^CONTENT_SCHEDULE$
+            time_offset_seconds:
+              type: integer
+              format: int32
+              description: Offset in seconds from the scheduled time at which the trigger fired.
+      example:
+        version: '1'
+        trigger_id: trigger_test_123
+        event_type: CONTENT_SCHEDULE
+        datasource: GOOGLECALENDAR
+        reason: CONTENT_SCHEDULE
+        doc_type: event
+        doc_id: GCAL_event_123
+        view_url: https://calendar.google.com/event?eid=abc
+        title: Weekly Sync
+        event_time: '2025-04-23T12:00:00Z'
+        time_offset_seconds: 1800
+    TriggerWebhookEvent:
+      description: Every delivered webhook is one of these two variants. A trigger with a cron schedule carries no document and so cannot be delivered over a webhook.
+      oneOf:
+        - $ref: '#/components/schemas/DocumentChangeWebhookEvent'
+        - $ref: '#/components/schemas/ContentScheduleWebhookEvent'
+      discriminator:
+        propertyName: event_type
+        mapping:
+          DOCUMENT_CHANGE: '#/components/schemas/DocumentChangeWebhookEvent'
+          CONTENT_SCHEDULE: '#/components/schemas/ContentScheduleWebhookEvent'
+    TriggerGetResponse:
+      type: object
+      required:
+        - trigger
+        - request_id
+      properties:
+        trigger:
+          $ref: '#/components/schemas/Trigger'
+        request_id:
+          type: string
+          description: Platform-generated request ID for support correlation.
+    TriggerUpdateRequest:
+      type: object
+      additionalProperties: false
+      description: Partial update. Only the supplied fields are changed.
+      properties:
+        status:
+          $ref: '#/components/schemas/TriggerStatus'
+        description:
+          type: string
+          description: Optional note describing this trigger.
+          example: Reviews I am tagged on, sent to my team's review channel
+        inputs:
+          type: object
+          additionalProperties: true
+          description: Values for the preset's inputs.
+          example:
+            repository: acme/payments-api
+        delivery:
+          $ref: '#/components/schemas/TriggerDelivery'
+    TriggerEventSearchRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        page_size:
+          type: integer
+          description: Maximum number of events to return.
+          minimum: 1
+          maximum: 100
+          default: 10
+    TriggerEventType:
+      type: string
+      description: The kind of event.
+      example: DOCUMENT_CHANGE
+      enum:
+        - DOCUMENT_CHANGE
+      x-enumDescriptions:
+        DOCUMENT_CHANGE: A document was created, updated, or deleted.
+    TriggerEventReason:
+      type: string
+      description: Why the event fired.
+      example: REVIEW_REQUESTED
+      enum:
+        - CREATED
+        - UPDATED
+        - DELETED
+        - MEETS_CONDITION
+        - ASSIGNED
+        - UNASSIGNED
+        - LABELED
+        - UNLABELED
+        - REVIEW_REQUESTED
+        - REVIEW_REQUEST_REMOVED
+        - READY_FOR_REVIEW
+        - CONVERTED_TO_DRAFT
+        - WEBHOOK_UPDATED
+      x-enumDescriptions:
+        CREATED: The document was created.
+        UPDATED: The document was updated.
+        DELETED: The document was deleted.
+        MEETS_CONDITION: The document started matching the trigger's conditions.
+        ASSIGNED: The item was assigned to someone.
+        UNASSIGNED: The item was unassigned.
+        LABELED: A label was added.
+        UNLABELED: A label was removed.
+        REVIEW_REQUESTED: A review was requested.
+        REVIEW_REQUEST_REMOVED: A review request was withdrawn.
+        READY_FOR_REVIEW: A draft was marked ready for review.
+        CONVERTED_TO_DRAFT: The item was converted back to a draft.
+        WEBHOOK_UPDATED: The source system sent a webhook update.
+    TriggerEvent:
+      type: object
+      required:
+        - event_type
+        - doc_id
+        - datasource
+        - doc_type
+        - view_url
+        - title
+        - reason
+        - event_time
+      description: A content event a trigger can fire on.
+      properties:
+        event_type:
+          $ref: '#/components/schemas/TriggerEventType'
+        datasource:
+          type: string
+          description: Datasource the event originated from.
+          example: GITHUB
+        reason:
+          $ref: '#/components/schemas/TriggerEventReason'
+        doc_type:
+          type: string
+          description: Datasource-specific object type.
+          example: pull
+        doc_id:
+          type: string
+          description: Identifier of the document the event is about.
+        view_url:
+          type: string
+          description: Link to the document in its source system.
+        title:
+          type: string
+          description: Title of the document, or the subject for email.
+        event_time:
+          type: string
+          format: date-time
+          description: 'When the event happened at the source: the document''s own change timestamp for a document change, and the scheduled time for a content schedule. Omitted when the source did not supply one.'
+    TriggerEventSearchResponse:
+      type: object
+      required:
+        - results
+        - has_more
+        - request_id
+      properties:
+        results:
+          type: array
+          description: Matching events, most recent first.
+          items:
+            $ref: '#/components/schemas/TriggerEvent'
+        has_more:
+          type: boolean
+          description: |
+            Whether more events matched than were returned. Raise `page_size` to see more; cursor-based paging is not offered yet.
+        request_id:
+          type: string
+          description: Unique identifier for this request, for support and debugging.
+    TriggerPresetSummary:
+      type: object
+      required:
+        - preset_id
+        - datasource
+        - display_name
+      properties:
+        preset_id:
+          type: string
+          description: ID of the preset. Pass this when creating a trigger.
+          example: GITHUB_1
+        datasource:
+          type: string
+          description: Datasource the preset fires on.
+          example: github
+        display_name:
+          type: string
+          description: Human-readable preset name.
+          example: Review requested from me
+        description:
+          type: string
+          description: Human-readable description of when the preset fires.
+          example: A review is requested from the trigger creator on a pull request
+    TriggerPresetListResponse:
+      type: object
+      required:
+        - results
+        - has_more
+        - next_cursor
+        - request_id
+      properties:
+        results:
+          type: array
+          description: Trigger presets available to the caller.
+          items:
+            $ref: '#/components/schemas/TriggerPresetSummary'
+        has_more:
+          type: boolean
+          description: Whether additional results are available.
+        next_cursor:
+          type:
+            - string
+            - 'null'
+          description: Cursor for the next page, or null when no more results are available.
+        request_id:
+          type: string
+          description: Platform-generated request ID for support correlation.
+    TriggerPresetInputType:
+      type: string
+      description: Type of a preset input.
+      example: PICKLIST
+      enum:
+        - PICKLIST
+        - TEXT
+        - USER
+    TriggerPresetInputValue:
+      type: object
+      required:
+        - value
+        - display_name
+      properties:
+        value:
+          type: string
+          description: |
+            The exact value to send in the trigger's `inputs` for this choice (e.g. a channel name, a user's email, etc).
+          example: acme/payments-api
+        display_name:
+          type: string
+          description: Human-readable name for this value.
+          example: acme/payments-api
+    TriggerPresetInput:
+      type: object
+      required:
+        - field
+        - type
+        - display_name
+        - is_required
+      properties:
+        field:
+          type: string
+          description: Identifier of the input, supplied as a key in the trigger's `inputs`.
+          example: repository
+        type:
+          $ref: '#/components/schemas/TriggerPresetInputType'
+        display_name:
+          type: string
+          description: Human-readable name for the input.
+          example: Repository
+        is_required:
+          type: boolean
+          description: Whether the caller must supply a value for this input.
+        values:
+          type: array
+          description: |
+            Bounded initial set of selectable values for a picklist input. Omitted entirely for free-text inputs.
+          items:
+            $ref: '#/components/schemas/TriggerPresetInputValue'
+        is_truncated:
+          type: boolean
+          description: |
+            Whether additional selectable values were omitted from `values`. When true, use GET /trigger-presets/{preset_id}/input-values with a query to narrow the result set.
+    TriggerPreset:
+      allOf:
+        - $ref: '#/components/schemas/TriggerPresetSummary'
+        - type: object
+          required:
+            - inputs
+          properties:
+            inputs:
+              type: array
+              description: Inputs the caller may supply when creating a trigger from this preset.
+              items:
+                $ref: '#/components/schemas/TriggerPresetInput'
+    TriggerPresetGetResponse:
+      type: object
+      required:
+        - trigger_preset
+        - request_id
+      properties:
+        trigger_preset:
+          $ref: '#/components/schemas/TriggerPreset'
+        request_id:
+          type: string
+          description: Platform-generated request ID for support correlation.
+    TriggerPresetInputValueListResponse:
+      type: object
+      required:
+        - results
+        - is_truncated
+        - request_id
+      properties:
+        results:
+          type: array
+          description: The bounded set of selectable values matching the query.
+          items:
+            $ref: '#/components/schemas/TriggerPresetInputValue'
+        is_truncated:
+          type: boolean
+          description: |
+            Whether additional matches were omitted. When true, refine `query` to narrow the result set.
+        request_id:
+          type: string
+          description: Platform-generated request ID for support correlation.
+    TriggerPresetEventSearchRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        inputs:
+          type: object
+          description: |
+            Values for the preset's input fields, keyed by field name.
+          additionalProperties:
+            type: string
+          example:
+            repository: acme/payments-api
+        page_size:
+          type: integer
+          description: Maximum number of events to return.
+          minimum: 1
+          maximum: 100
+          default: 10
   responses:
     BadRequest:
       description: Invalid request (malformed JSON, invalid parameter values, unknown fields).
@@ -2482,11 +3824,53 @@ components:
         application/problem+json:
           schema:
             $ref: '#/components/schemas/ProblemDetail'
+  parameters:
+    TriggerWebhookId:
+      name: webhook-id
+      in: header
+      required: true
+      description: Opaque delivery ID. It remains stable across retries of the same event and can be used as an idempotency key.
+      schema:
+        type: string
+        minLength: 1
+      example: msg_test_123
+    TriggerWebhookTimestamp:
+      name: webhook-timestamp
+      in: header
+      required: true
+      description: Unix time in seconds when this delivery attempt was signed.
+      schema:
+        type: integer
+        format: int64
+      example: 1700000000
+    TriggerWebhookSignature:
+      name: webhook-signature
+      in: header
+      required: true
+      description: |
+        `v1,` followed by the standard Base64-encoded HMAC-SHA256 digest. To verify it, remove the
+        `whsec_` prefix from `signing_secret`, standard-Base64-decode the remainder, and use those
+        bytes as the HMAC key. Sign the UTF-8 bytes of `webhook-id + "." + webhook-timestamp + "."
+        + raw request body`. Verify the signature against the unmodified request body before
+        parsing JSON, and use a constant-time comparison.
+
+        Fixed test vector (the raw body is one line with no trailing newline):
+
+        - decoded signing key bytes (UTF-8; test only): `test_webhook_signing_secret_1234`
+        - `webhook-id`: `81e6dc877ac553ef96ecbc939c1e46431159491991ba55cd131fbd0e3746c6bc`
+        - `webhook-timestamp`: `1700000000`
+        - `raw request body`: `{"version":"1","trigger_id":"trigger_test_123","datasource":"GITHUB","reason":"REVIEW_REQUESTED","doc_type":"pull","event_type":"DOCUMENT_CHANGE","doc_id":"GITHUB_pull_123","view_url":"https://github.com/acme/payments-api/pull/123","title":"Add retry backoff to the crawler","event_time":"2025-04-23T11:00:00Z"}`
+        - `webhook-signature`: `v1,JqvHW0dwAOSLndiwQdXLUS/P+2RvOO8x4sOWgA/w0Gs=`
+      schema:
+        type: string
+        pattern: ^v1,[A-Za-z0-9+/=]+$
+      example: v1,xxx
 x-tagGroups:
   - name: AI
     tags:
       - Agents
       - Chat
+      - CORL
       - Skills
   - name: Data Retrieval
     tags:

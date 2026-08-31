@@ -62,9 +62,11 @@ defmodule Gleanex.Client.FeedRequest do
           "PROJECT_FOCUS_BLOCK",
           "PROJECT_NEXT_STEP",
           "DEMO_CARD",
+          "RESOLVE_MEETING_CONFLICT",
           "OOO_PLANNER",
           "OOO_CATCH_UP",
-          "ADMIN_HEALTH_CENTER"
+          "ADMIN_HEALTH_CENTER",
+          "KNOWLEDGE_GAP"
         ]
       ],
       requestOptions: {Gleanex.Client.FeedRequestOptions, :t},

@@ -33,14 +33,14 @@ defmodule Gleanex.Platform.Result do
 
   def __fields__(:t) do
     [
-      created_at: {:string, "date-time"},
+      created_at: {:union, [{:string, "date-time"}, :null]},
       creator: {Gleanex.Platform.PersonReference, :t},
       datasource: :string,
-      document_type: :string,
+      document_type: {:union, [:string, :null]},
       owner: {Gleanex.Platform.PersonReference, :t},
       snippets: [:string],
       title: :string,
-      updated_at: {:string, "date-time"},
+      updated_at: {:union, [{:string, "date-time"}, :null]},
       url: {:string, "uri"}
     ]
   end

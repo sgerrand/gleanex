@@ -1,16 +1,16 @@
-defmodule Gleanex.Platform.SkillVersionsListResponse do
+defmodule Gleanex.Platform.TriggerListResponse do
   @moduledoc """
-  Provides struct and type for a SkillVersionsListResponse
+  Provides struct and type for a TriggerListResponse
   """
 
   @type t :: %__MODULE__{
           has_more: boolean,
           next_cursor: String.t() | nil,
           request_id: String.t(),
-          versions: [Gleanex.Platform.SkillVersion.t()]
+          results: [Gleanex.Platform.Trigger.t()]
         }
 
-  defstruct [:has_more, :next_cursor, :request_id, :versions]
+  defstruct [:has_more, :next_cursor, :request_id, :results]
 
   @doc false
   @spec __fields__(atom) :: keyword
@@ -21,7 +21,7 @@ defmodule Gleanex.Platform.SkillVersionsListResponse do
       has_more: :boolean,
       next_cursor: {:union, [:string, :null]},
       request_id: :string,
-      versions: [{Gleanex.Platform.SkillVersion, :t}]
+      results: [{Gleanex.Platform.Trigger, :t}]
     ]
   end
 end

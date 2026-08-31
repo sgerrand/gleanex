@@ -23,7 +23,8 @@ defmodule Gleanex.Client.ServerToolResponse do
       grantScope: {:enum, ["CURRENT_REQUEST", "CURRENT_SESSION", "ALWAYS"]},
       isGranted: :boolean,
       requestId: :string,
-      requestType: {:enum, ["EXECUTION", "AUTHENTICATION_SUGGESTION", "VOTE_SUGGESTION"]}
+      requestType:
+        {:enum, ["EXECUTION", "AUTHENTICATION_SUGGESTION", "VOTE_SUGGESTION", "SANDBOX_EGRESS"]}
     ]
   end
 end

@@ -64,11 +64,13 @@ defmodule Gleanex.Client.FeedResult do
            "PROJECT_FOCUS_BLOCK",
            "PROJECT_NEXT_STEP",
            "DEMO_CARD",
+           "RESOLVE_MEETING_CONFLICT",
            "OOO_PLANNER",
            "OOO_CATCH_UP",
-           "ADMIN_HEALTH_CENTER"
+           "ADMIN_HEALTH_CENTER",
+           "KNOWLEDGE_GAP"
          ]},
-      placementReason: {:enum, ["ORGANIC", "PROMO"]},
+      placementReason: {:enum, ["ORGANIC", "PROMO", "PINNED"]},
       primaryEntry: {Gleanex.Client.FeedEntry, :t},
       rank: :integer,
       secondaryEntries: [{Gleanex.Client.FeedEntry, :t}]

@@ -2,7 +2,7 @@ openapi: 3.0.0
 info:
   version: 0.9.0
   title: Glean Client API
-  x-source-commit-sha: b85d08259cae10cc2b68c7724c1c4898aeeadfad
+  x-source-commit-sha: 4ed59b10dea0428299af236c9f0db8544186e3da
   description: |
     # Introduction
     These are the public APIs to enable implementing a custom client interface to the Glean system.
@@ -2702,14 +2702,15 @@ paths:
       summary: Get tool definitions from a tool server.
       description: |
         Returns the name, description and JSON input schema for the named tools on the
-        specified tool server. Works for both action packs and MCP servers.
+        specified tool server. Works for Glean's built-in tools, tool packs and MCP
+        servers.
 
         `toolNames` is required. Names that do not exist on the server are returned in
         `notFound` rather than failing the request, so a single bad name does not force
         callers into one-at-a-time retries. Matching is case-insensitive and treats `-`
         and `_` as equivalent.
 
-        Native tools are not served; `serverId=native` returns 404.
+        Use `serverId=native` for Glean's built-in tools.
       operationId: getToolServerTools
       x-visibility: Preview
       x-glean-experimental:
@@ -4268,6 +4269,7 @@ components:
       properties:
         count:
           type: integer
+          format: int64
           description: The counter value
         period:
           $ref: '#/components/schemas/Period'
@@ -6458,6 +6460,22 @@ components:
           example: sample.pdf
         metadata:
           $ref: '#/components/schemas/ChatFileMetadata'
+    ChatSkill:
+      type: object
+      description: A skill cited by Assistant.
+      required:
+        - id
+      properties:
+        id:
+          type: string
+          minLength: 1
+          description: Artifact ID of the skill.
+        name:
+          type: string
+          description: Name of the skill.
+        url:
+          type: string
+          description: URL for viewing the skill.
     ReferenceRange:
       description: Each text range from the response can correspond to an array of snippets from the citation source.
       properties:
@@ -6481,6 +6499,8 @@ components:
           $ref: '#/components/schemas/Person'
         sourceCustomEntity:
           $ref: '#/components/schemas/CustomEntity'
+        sourceSkill:
+          $ref: '#/components/schemas/ChatSkill'
         referenceRanges:
           description: Each reference range and its corresponding snippets
           type: array
@@ -6578,10 +6598,10 @@ components:
             - none
             - private_key_jwt
           x-enumDescriptions:
-            - client_secret_post: Send client_id and client_secret as form fields in the token request body.
-            - client_secret_basic: Send client_id and client_secret via the HTTP Basic Authorization header.
-            - none: Public client - omit the client secret and authenticate with the PKCE code_verifier only.
-            - private_key_jwt: Authenticate with a JWT client assertion signed by the client's private key (RFC 7523 Section 2.2 / OIDC Core Section 9). Requires a key pair pre-registered with the authorization server.
+            client_secret_post: Send client_id and client_secret as form fields in the token request body.
+            client_secret_basic: Send client_id and client_secret via the HTTP Basic Authorization header.
+            none: Public client - omit the client secret and authenticate with the PKCE code_verifier only.
+            private_key_jwt: Authenticate with a JWT client assertion signed by the client's private key (RFC 7523 Section 2.2 / OIDC Core Section 9). Requires a key pair pre-registered with the authorization server.
           description: The OAuth 2.0 token endpoint authentication method (RFC 7591). Determines how the client authenticates when exchanging an authorization code for a token. Values use lowercase to match the OAuth 2.0 wire format (RFC 7591 Section 2).
         authHeaderType:
           type: string
@@ -6764,10 +6784,12 @@ components:
             EXECUTION: Request for approving execution of the tool.
             AUTHENTICATION_SUGGESTION: Request for authenticating to a tool, provided as a (tool) suggestion.
             VOTE_SUGGESTION: Suggestion to vote for enabling an available-but-not-enabled tool.
+            SANDBOX_EGRESS: Request to approve an outbound/egress call from the sandbox.
           enum:
             - EXECUTION
             - AUTHENTICATION_SUGGESTION
             - VOTE_SUGGESTION
+            - SANDBOX_EGRESS
         requestId:
           type: string
           description: Unique identifier for this request.
@@ -6836,6 +6858,9 @@ components:
 
         For VOTE_SUGGESTION requests:
         - voted: whether the user voted for this tool
+
+        For SANDBOX_EGRESS requests:
+        - isGranted: whether the sandbox egress call is approved
       allOf:
         - $ref: '#/components/schemas/ServerToolBase'
         - type: object
@@ -7422,7 +7447,7 @@ components:
         isDraft:
           type: boolean
           description: |
-            When true, validates and stores a draft preview without publishing (used for PR preview links). Takes precedence over `syncMode`: when `isDraft` is true, `syncMode` is ignored.
+            Deprecated. Draft mutation semantics are not supported for transient previews. Use transient and parentWorkflowId instead.
     ImportAgentStatus:
       type: string
       enum:
@@ -9330,9 +9355,11 @@ components:
               - PROJECT_FOCUS_BLOCK
               - PROJECT_NEXT_STEP
               - DEMO_CARD
+              - RESOLVE_MEETING_CONFLICT
               - OOO_PLANNER
               - OOO_CATCH_UP
               - ADMIN_HEALTH_CENTER
+              - KNOWLEDGE_GAP
           description: Categories of content requested. An allowlist gives flexibility to request content separately or together.
         requestOptions:
           $ref: '#/components/schemas/FeedRequestOptions'
@@ -9356,6 +9383,19 @@ components:
         showNewIndicator:
           type: boolean
           description: show a "New" pill next to the item
+    CalendarRoomBookingStatus:
+      type: string
+      description: The current booking status of the room resource associated with an event.
+      enum:
+        - NONE
+        - ACCEPTED
+        - DECLINED
+        - PENDING
+      x-enum-varnames:
+        - CALENDAR_ROOM_BOOKING_STATUS_NONE
+        - CALENDAR_ROOM_BOOKING_STATUS_ACCEPTED
+        - CALENDAR_ROOM_BOOKING_STATUS_DECLINED
+        - CALENDAR_ROOM_BOOKING_STATUS_PENDING
     ConferenceData:
       required:
         - provider
@@ -9463,6 +9503,15 @@ components:
               description: A permalink for this calendar event
             attendees:
               $ref: '#/components/schemas/CalendarAttendees'
+            isOrganizer:
+              type: boolean
+              nullable: true
+              description: Whether the requesting user is the organizer of this event.
+            roomBookingStatus:
+              $ref: '#/components/schemas/CalendarRoomBookingStatus'
+            roomName:
+              type: string
+              description: The display name of the room resource associated with this event.
             location:
               type: string
               description: The location that this event is taking place at.
@@ -9755,6 +9804,7 @@ components:
             - STARTER_KIT_ORG_CHART
             - STARTER_KIT_ADD_DOC
             - MEETING_RECAP
+            - MEETING_ROOM
             - MEETING_PREP_AUTOMATION
             - ACTIVE_DISCUSSION
             - MID_DAY_CATCH_UP
@@ -9768,9 +9818,11 @@ components:
             - PROJECT_FOCUS_BLOCK
             - PROJECT_NEXT_STEP
             - DEMO_CARD
+            - RESOLVE_MEETING_CONFLICT
             - OOO_PLANNER
             - OOO_CATCH_UP
             - ADMIN_HEALTH_CENTER
+            - KNOWLEDGE_GAP
           description: Type of the justification.
         justification:
           type: string
@@ -9860,9 +9912,11 @@ components:
             - PROJECT_FOCUS_BLOCK
             - PROJECT_NEXT_STEP
             - DEMO_CARD
+            - RESOLVE_MEETING_CONFLICT
             - OOO_PLANNER
             - OOO_CATCH_UP
             - ADMIN_HEALTH_CENTER
+            - KNOWLEDGE_GAP
           description: Category of the result, one of the requested categories in incoming request.
         primaryEntry:
           $ref: '#/components/schemas/FeedEntry'
@@ -9879,7 +9933,8 @@ components:
           enum:
             - ORGANIC
             - PROMO
-          description: Placement source for ranked feed results. ORGANIC means the card was emitted by normal feed ranking. PROMO means the card was inserted by the homepage cards promo framework.
+            - PINNED
+          description: Placement source for ranked feed results. ORGANIC means the card was emitted by normal feed ranking. PROMO means the card was inserted by the homepage cards promo framework. PINNED means the card was moved to the head of the ranked stack (e.g. knowledge-gap pilot cards).
     FeedResponse:
       required:
         - serverTimestamp

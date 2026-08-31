@@ -3,7 +3,7 @@
 repository: gleanwork/open-api
 directory: source_specs
 ref: main
-commit: ac8ea37466ccde4f8c4d4362036ccba3bec0acdc
+commit: 22e7876626a31f95c41c8f2d84977fc4c36bd276
 client_rest.yaml: 0.9.0
 indexing.yaml: 0.9.0
 platform.yaml: 2026-04-01

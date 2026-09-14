@@ -18,8 +18,8 @@ defmodule Gleanex.Platform.ChatOutputMessage do
   def __fields__(:t) do
     [
       content: [{Gleanex.Platform.ChatOutputTextContent, :t}],
-      role: {:const, "assistant"},
-      type: {:const, "message"}
+      role: {:const, "ASSISTANT"},
+      type: {:const, "MESSAGE"}
     ]
   end
 end

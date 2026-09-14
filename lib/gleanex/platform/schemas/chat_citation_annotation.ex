@@ -5,7 +5,7 @@ defmodule Gleanex.Platform.ChatCitationAnnotation do
 
   @type t :: %__MODULE__{
           end_index: integer | nil,
-          snippets: [Gleanex.Platform.ChatCitationSnippet.t()] | nil,
+          snippets: [map] | nil,
           sources: [
             map
             | Gleanex.Platform.ChatCustomEntitySource.t()
@@ -24,8 +24,8 @@ defmodule Gleanex.Platform.ChatCitationAnnotation do
 
   def __fields__(:t) do
     [
-      end_index: :integer,
-      snippets: [{Gleanex.Platform.ChatCitationSnippet, :t}],
+      end_index: {:union, [:integer, :null]},
+      snippets: {:union, [[:map], :null]},
       sources: [
         union: [
           :map,
@@ -34,8 +34,8 @@ defmodule Gleanex.Platform.ChatCitationAnnotation do
           {Gleanex.Platform.ChatPersonSource, :t}
         ]
       ],
-      start_index: :integer,
-      type: {:const, "citation"}
+      start_index: {:union, [:integer, :null]},
+      type: {:const, "CITATION"}
     ]
   end
 end

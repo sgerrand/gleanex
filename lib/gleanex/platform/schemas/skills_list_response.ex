@@ -19,7 +19,7 @@ defmodule Gleanex.Platform.SkillsListResponse do
   def __fields__(:t) do
     [
       has_more: :boolean,
-      next_cursor: :string,
+      next_cursor: {:union, [:string, :null]},
       request_id: :string,
       skills: [{Gleanex.Platform.Skill, :t}]
     ]

@@ -16,6 +16,6 @@ defmodule Gleanex.Client.CountInfo do
   def __fields__(type \\ :t)
 
   def __fields__(:t) do
-    [count: :integer, org: :string, period: {Gleanex.Client.Period, :t}]
+    [count: {:integer, "int64"}, org: :string, period: {Gleanex.Client.Period, :t}]
   end
 end

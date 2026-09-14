@@ -8,14 +8,21 @@ defmodule Gleanex.Platform.Chat do
   @doc """
   Create a chat response
 
-  Run an assistant turn. Set `stream` to true to receive server-sent events; otherwise the response is a typed JSON response object.
+  Run an assistant turn. The default response is JSON. HTTP clients request server-sent events by setting `stream` to true in the JSON body. An `Accept: text/event-stream` header does not replace `stream`.
 
   ## Request Body
 
   **Content Types**: `application/json`
   """
   @spec create(body :: Gleanex.Platform.ChatCreateRequest.t(), opts :: keyword) ::
-          {:ok, Gleanex.Platform.ChatCompletedResponse.t() | String.t()}
+          {:ok,
+           Gleanex.Platform.ChatCompletedResponse.t()
+           | Gleanex.Platform.ChatStreamOutputTextDelta.t()
+           | Gleanex.Platform.ChatStreamOutputTextDone.t()
+           | Gleanex.Platform.ChatStreamProgress.t()
+           | Gleanex.Platform.ChatStreamResponseCompleted.t()
+           | Gleanex.Platform.ChatStreamResponseCreated.t()
+           | Gleanex.Platform.ChatStreamResponseFailed.t()}
           | {:error, Gleanex.Error.t()}
   def create(body, opts \\ []) do
     client = opts[:client] || @default_client
@@ -28,7 +35,17 @@ defmodule Gleanex.Platform.Chat do
       method: :post,
       request: [{"application/json", {Gleanex.Platform.ChatCreateRequest, :t}}],
       response: [
-        {200, {:union, [:string, {Gleanex.Platform.ChatCompletedResponse, :t}]}},
+        {200,
+         {:union,
+          [
+            {Gleanex.Platform.ChatCompletedResponse, :t},
+            {Gleanex.Platform.ChatStreamOutputTextDelta, :t},
+            {Gleanex.Platform.ChatStreamOutputTextDone, :t},
+            {Gleanex.Platform.ChatStreamProgress, :t},
+            {Gleanex.Platform.ChatStreamResponseCompleted, :t},
+            {Gleanex.Platform.ChatStreamResponseCreated, :t},
+            {Gleanex.Platform.ChatStreamResponseFailed, :t}
+          ]}},
         {400, {Gleanex.Platform.ProblemDetail, :t}},
         {401, {Gleanex.Platform.ProblemDetail, :t}},
         {403, {Gleanex.Platform.ProblemDetail, :t}},

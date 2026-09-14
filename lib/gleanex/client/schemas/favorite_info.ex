@@ -39,6 +39,7 @@ defmodule Gleanex.Client.FavoriteInfo do
            "PINS_TYPE",
            "SCRIBES_TYPE",
            "SHORTCUTS_TYPE",
+           "SKILLS_TYPE",
            "SLIDE_TYPE",
            "SPREADSHEET_TYPE",
            "INLINE_HTML_TYPE",

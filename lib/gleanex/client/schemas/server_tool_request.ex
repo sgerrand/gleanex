@@ -22,7 +22,8 @@ defmodule Gleanex.Client.ServerToolRequest do
     [
       actionPreview: {Gleanex.Client.ActionPreview, :t},
       requestId: :string,
-      requestType: {:enum, ["EXECUTION", "AUTHENTICATION_SUGGESTION", "VOTE_SUGGESTION"]},
+      requestType:
+        {:enum, ["EXECUTION", "AUTHENTICATION_SUGGESTION", "VOTE_SUGGESTION", "SANDBOX_EGRESS"]},
       serverId: :string,
       toolCta: :string,
       toolDisplayName: :string

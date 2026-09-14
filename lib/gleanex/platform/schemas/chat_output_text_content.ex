@@ -19,7 +19,7 @@ defmodule Gleanex.Platform.ChatOutputTextContent do
     [
       annotations: [{Gleanex.Platform.ChatCitationAnnotation, :t}],
       text: :string,
-      type: {:const, "output_text"}
+      type: {:const, "OUTPUT_TEXT"}
     ]
   end
 end

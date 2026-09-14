@@ -84,6 +84,36 @@ defmodule Gleanex.Platform.Skills do
   end
 
   @doc """
+  Delete skill
+
+  Delete a skill the authenticated caller is allowed to manage. This operation permanently removes all versions of the skill.
+
+  """
+  @spec delete(skill_id :: String.t(), opts :: keyword) :: :ok | {:error, Gleanex.Error.t()}
+  def delete(skill_id, opts \\ []) do
+    client = opts[:client] || @default_client
+
+    client.request(%{
+      args: [skill_id: skill_id],
+      call: {Gleanex.Platform.Skills, :delete},
+      url: "/skills/#{skill_id}",
+      method: :delete,
+      response: [
+        {204, :null},
+        {400, {Gleanex.Platform.ProblemDetail, :t}},
+        {401, {Gleanex.Platform.ProblemDetail, :t}},
+        {403, {Gleanex.Platform.ProblemDetail, :t}},
+        {404, {Gleanex.Platform.ProblemDetail, :t}},
+        {408, {Gleanex.Platform.ProblemDetail, :t}},
+        {429, {Gleanex.Platform.ProblemDetail, :t}},
+        {500, {Gleanex.Platform.ProblemDetail, :t}},
+        {503, {Gleanex.Platform.ProblemDetail, :t}}
+      ],
+      opts: opts
+    })
+  end
+
+  @doc """
   Retrieve skill
 
   Retrieve metadata for a skill available to the authenticated user.
@@ -208,6 +238,43 @@ defmodule Gleanex.Platform.Skills do
   end
 
   @doc """
+  Import skills from GitHub
+
+  Import one or more skills selected from a GitHub source preview. Each source URL is fetched and persisted as an independent skill with source provenance. This operation does not create a durable source resource. The import is atomic: if any source cannot be fetched, validated, or persisted, no skills are created.
+
+  ## Request Body
+
+  **Content Types**: `application/json`
+  """
+  @spec import(body :: Gleanex.Platform.SkillImportRequest.t(), opts :: keyword) ::
+          {:ok, Gleanex.Platform.SkillImportResponse.t()} | {:error, Gleanex.Error.t()}
+  def import body, opts \\ [] do
+    client = opts[:client] || @default_client
+
+    client.request(%{
+      args: [body: body],
+      call: {Gleanex.Platform.Skills, :import},
+      url: "/skills/import",
+      body: body,
+      method: :post,
+      request: [{"application/json", {Gleanex.Platform.SkillImportRequest, :t}}],
+      response: [
+        {200, {Gleanex.Platform.SkillImportResponse, :t}},
+        {400, {Gleanex.Platform.ProblemDetail, :t}},
+        {401, {Gleanex.Platform.ProblemDetail, :t}},
+        {403, {Gleanex.Platform.ProblemDetail, :t}},
+        {408, {Gleanex.Platform.ProblemDetail, :t}},
+        {409, {Gleanex.Platform.ProblemDetail, :t}},
+        {413, {Gleanex.Platform.ProblemDetail, :t}},
+        {429, {Gleanex.Platform.ProblemDetail, :t}},
+        {500, {Gleanex.Platform.ProblemDetail, :t}},
+        {503, {Gleanex.Platform.ProblemDetail, :t}}
+      ],
+      opts: opts
+    })
+  end
+
+  @doc """
   List skills
 
   List skills available to the authenticated user.
@@ -311,6 +378,39 @@ defmodule Gleanex.Platform.Skills do
         {401, {Gleanex.Platform.ProblemDetail, :t}},
         {403, {Gleanex.Platform.ProblemDetail, :t}},
         {408, {Gleanex.Platform.ProblemDetail, :t}},
+        {413, {Gleanex.Platform.ProblemDetail, :t}},
+        {429, {Gleanex.Platform.ProblemDetail, :t}},
+        {500, {Gleanex.Platform.ProblemDetail, :t}},
+        {503, {Gleanex.Platform.ProblemDetail, :t}}
+      ],
+      opts: opts
+    })
+  end
+
+  @doc """
+  Sync a GitHub-imported skill
+
+  Refresh one GitHub-imported skill from its stored source URL. If the skill content has changed, this operation creates a new skill version. If the skill is no longer present upstream, the stored skill is left unchanged and must be deleted explicitly.
+
+  """
+  @spec sync(skill_id :: String.t(), opts :: keyword) ::
+          {:ok, Gleanex.Platform.SkillSyncResponse.t()} | {:error, Gleanex.Error.t()}
+  def sync(skill_id, opts \\ []) do
+    client = opts[:client] || @default_client
+
+    client.request(%{
+      args: [skill_id: skill_id],
+      call: {Gleanex.Platform.Skills, :sync},
+      url: "/skills/#{skill_id}/sync",
+      method: :post,
+      response: [
+        {200, {Gleanex.Platform.SkillSyncResponse, :t}},
+        {400, {Gleanex.Platform.ProblemDetail, :t}},
+        {401, {Gleanex.Platform.ProblemDetail, :t}},
+        {403, {Gleanex.Platform.ProblemDetail, :t}},
+        {404, {Gleanex.Platform.ProblemDetail, :t}},
+        {408, {Gleanex.Platform.ProblemDetail, :t}},
+        {409, {Gleanex.Platform.ProblemDetail, :t}},
         {413, {Gleanex.Platform.ProblemDetail, :t}},
         {429, {Gleanex.Platform.ProblemDetail, :t}},
         {500, {Gleanex.Platform.ProblemDetail, :t}},

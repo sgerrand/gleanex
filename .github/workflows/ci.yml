@@ -231,3 +231,23 @@ jobs:
       - run: mix deps.get
 
       - run: mix dialyzer --format github
+
+  required:
+    name: Required
+    if: always()
+    needs:
+      - test
+      - dialyzer
+      - docs
+      - generated
+      - lint
+      - markdown
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: Fail if any required job did not succeed
+        if: >-
+          contains(needs.*.result, 'failure') ||
+          contains(needs.*.result, 'cancelled') ||
+          contains(needs.*.result, 'skipped')
+        run: exit 1

@@ -115,7 +115,7 @@ jobs:
       # needs neither the BEAM nor the dependency cache. Rules and exclusions
       # live in mado.toml, which the action's default `check .` picks up, so a
       # local `mado check` behaves the same as CI.
-      - uses: akiomik/mado@177695b4d2cd6b107f881a8e91067cc7588fb129 # v0.3.1
+      - uses: akiomik/mado@6642676268ddaad6187482ef57d95e218c6b865c # v0.3.2
 
   docs:
     name: Docs
@@ -231,3 +231,23 @@ jobs:
       - run: mix deps.get
 
       - run: mix dialyzer --format github
+
+  required:
+    name: Required
+    if: always()
+    needs:
+      - test
+      - dialyzer
+      - docs
+      - generated
+      - lint
+      - markdown
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: Fail if any required job did not succeed
+        if: >-
+          contains(needs.*.result, 'failure') ||
+          contains(needs.*.result, 'cancelled') ||
+          contains(needs.*.result, 'skipped')
+        run: exit 1

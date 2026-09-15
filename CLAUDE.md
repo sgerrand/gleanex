@@ -137,6 +137,14 @@ Everything except `test/integration/` runs against `Req.Test` stubs.
   would mean restating the descriptions and churning on every regeneration.
 - `test/gleanex/generated_test.exs` compares the committed code against
   `priv/openapi/` in both directions, catching a stale regeneration.
+- `test/gleanex/framing_test.exs` is the only file using `stream_data`. Chunk
+  reassembly is the one place where a boundary bug hides from examples, so the
+  properties assert the thing the module exists for: the result depends on the
+  bytes, never on where the chunks fall. Generators are bounded on purpose;
+  `Gleanex.Framing` concatenates onto a buffer, so an unbounded payload cut into
+  hundreds of chunks is quadratic and would make a higher `:max_runs` crawl
+  rather than search harder. Runs come from `config/config.exs`: 100 locally,
+  1,000 in CI.
 - Coverage excludes test scaffolding only; the generated tree is counted in full.
 
 Tests that mutate the application environment, the working directory, `Mix.shell`

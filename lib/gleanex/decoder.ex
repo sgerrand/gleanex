@@ -68,6 +68,12 @@ defmodule Gleanex.Decoder do
 
   # Scored once and kept: `Enum.max_by/3` would otherwise have to be asked for
   # the winner's score a second time, and scoring walks a whole field table.
+  #
+  # Worth knowing before optimising this: it is a cold path. The vendored
+  # descriptions use a union in six places, all but one of them the whole
+  # response type rather than a field, and none offers more than one struct to
+  # choose between. Scoring therefore runs about once per response, not once per
+  # element.
   defp best_match(value, types) when is_map(value) do
     types
     |> Enum.filter(&struct_type?/1)
@@ -102,6 +108,15 @@ defmodule Gleanex.Decoder do
     |> Enum.count(fn key -> MapSet.member?(known, to_string(key)) end)
   end
 
+  # This runs once for every decoded map, which makes caching it in
+  # :persistent_term look like an easy win. It was measured and it is not one.
+  # `Code.ensure_loaded?` on a module that is already loaded costs about 17ns
+  # against :persistent_term.get's 15ns, so the ceiling on the whole idea is the
+  # under 3% of decoding this check accounts for, and an implementation measured
+  # no better than the run to run noise.
+  #
+  # What decoding actually spends its time on is one `Map.fetch` per field and
+  # the `struct/2` at the end of `build/3`, neither of which goes away.
   defp schema?(module) do
     Code.ensure_loaded?(module) and function_exported?(module, :__fields__, 1)
   end

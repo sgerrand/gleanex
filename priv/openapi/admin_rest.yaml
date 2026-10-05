@@ -2,7 +2,7 @@ openapi: 3.0.0
 info:
   version: 0.9.0
   title: Glean Rest Admin API
-  x-source-commit-sha: b85d08259cae10cc2b68c7724c1c4898aeeadfad
+  x-source-commit-sha: 4f000731cb8421032d050db7379f6da75dafcf36
   description: |
     # Introduction
     These are all the APIs exposed to the users through an auth token to utilize certain admin
@@ -56,6 +56,7 @@ paths:
       description: Updates an existing policy.
       summary: Updates an existing policy
       operationId: updatepolicy
+      x-visibility: Public
       tags:
         - Governance
       parameters:
@@ -394,7 +395,7 @@ paths:
         Gets the greenlisted configuration values for a datasource instance. Returns only configuration keys that are exposed via the public API greenlist.
       summary: Get datasource instance configuration
       operationId: getDatasourceInstanceConfiguration
-      x-visibility: Preview
+      x-visibility: Public
       tags:
         - Datasources
       parameters:
@@ -432,7 +433,7 @@ paths:
         Updates the greenlisted configuration values for a datasource instance. Only configuration keys that are exposed via the public API greenlist may be set. Returns the full greenlisted configuration after the update is applied.
       summary: Update datasource instance configuration
       operationId: updateDatasourceInstanceConfiguration
-      x-visibility: Preview
+      x-visibility: Public
       tags:
         - Datasources
       parameters:
@@ -477,7 +478,7 @@ paths:
         Returns the current credential status for a datasource instance. Access is limited to callers with the ADMIN scope; the handler enforces this check.
       summary: Get datasource instance credential status
       operationId: getDatasourceCredentialStatus
-      x-visibility: Preview
+      x-visibility: Public
       tags:
         - Datasources
       parameters:
@@ -516,7 +517,7 @@ paths:
         Only keys recognized as credential material for the datasource type may be set in `credentials.values` (e.g. `clientSecret`, `apiToken`, `privateKey`, depending on the configured auth method). Unrecognized keys, or keys that correspond to non-credential configuration, cause a 400; other instance configuration must be updated via PATCH /configure/datasources/{datasourceId}/instances/{instanceId}.
       summary: Rotate datasource instance credentials
       operationId: rotateDatasourceCredentials
-      x-visibility: Preview
+      x-visibility: Public
       tags:
         - Datasources
       parameters:

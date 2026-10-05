@@ -14,6 +14,7 @@ defmodule Gleanex.Client.AutocompleteResult do
           score: number | nil,
           structuredResult: Gleanex.Client.StructuredResult.t() | nil,
           trackingToken: String.t() | nil,
+          ugcAction: Gleanex.Client.AutocompleteResultUgcAction.t() | nil,
           url: String.t() | nil
         }
 
@@ -28,6 +29,7 @@ defmodule Gleanex.Client.AutocompleteResult do
     :score,
     :structuredResult,
     :trackingToken,
+    :ugcAction,
     :url
   ]
 
@@ -64,6 +66,7 @@ defmodule Gleanex.Client.AutocompleteResult do
       score: :number,
       structuredResult: {Gleanex.Client.StructuredResult, :t},
       trackingToken: :string,
+      ugcAction: {Gleanex.Client.AutocompleteResultUgcAction, :t},
       url: :string
     ]
   end

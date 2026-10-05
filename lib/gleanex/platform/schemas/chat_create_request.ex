@@ -7,10 +7,11 @@ defmodule Gleanex.Platform.ChatCreateRequest do
           conversation_id: String.t() | nil,
           input: String.t() | [map],
           store: boolean | nil,
-          stream: boolean | nil
+          stream: boolean | nil,
+          text: Gleanex.Platform.ChatCreateRequestText.t() | nil
         }
 
-  defstruct [:conversation_id, :input, :store, :stream]
+  defstruct [:conversation_id, :input, :store, :stream, :text]
 
   @doc false
   @spec __fields__(atom) :: keyword
@@ -21,7 +22,8 @@ defmodule Gleanex.Platform.ChatCreateRequest do
       conversation_id: :string,
       input: {:union, [:string, [:map]]},
       store: :boolean,
-      stream: :boolean
+      stream: :boolean,
+      text: {Gleanex.Platform.ChatCreateRequestText, :t}
     ]
   end
 end

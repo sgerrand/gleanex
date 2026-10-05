@@ -4,13 +4,20 @@ defmodule Gleanex.Client.McpBreakdownInsightsResponse do
   """
 
   @type t :: %__MODULE__{
+          authMethodsBreakdown: [Gleanex.Client.McpAuthMethodBreakdown.t()] | nil,
           hostApplicationsBreakdown: [Gleanex.Client.McpHostApplicationBreakdown.t()] | nil,
           serversBreakdown: [Gleanex.Client.McpServerBreakdown.t()] | nil,
           toolsBreakdown: [Gleanex.Client.McpToolBreakdown.t()] | nil,
           usersBreakdown: [Gleanex.Client.McpUserBreakdown.t()] | nil
         }
 
-  defstruct [:hostApplicationsBreakdown, :serversBreakdown, :toolsBreakdown, :usersBreakdown]
+  defstruct [
+    :authMethodsBreakdown,
+    :hostApplicationsBreakdown,
+    :serversBreakdown,
+    :toolsBreakdown,
+    :usersBreakdown
+  ]
 
   @doc false
   @spec __fields__(atom) :: keyword
@@ -18,6 +25,7 @@ defmodule Gleanex.Client.McpBreakdownInsightsResponse do
 
   def __fields__(:t) do
     [
+      authMethodsBreakdown: [{Gleanex.Client.McpAuthMethodBreakdown, :t}],
       hostApplicationsBreakdown: [{Gleanex.Client.McpHostApplicationBreakdown, :t}],
       serversBreakdown: [{Gleanex.Client.McpServerBreakdown, :t}],
       toolsBreakdown: [{Gleanex.Client.McpToolBreakdown, :t}],

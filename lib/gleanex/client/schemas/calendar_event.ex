@@ -13,7 +13,10 @@ defmodule Gleanex.Client.CalendarEvent do
           generatedAttachments: [Gleanex.Client.GeneratedAttachment.t()] | nil,
           hasTranscript: boolean | nil,
           id: String.t(),
+          isOrganizer: boolean | nil,
           location: String.t() | nil,
+          roomBookingStatus: String.t() | nil,
+          roomName: String.t() | nil,
           time: Gleanex.Client.TimeInterval.t() | nil,
           transcriptUrl: String.t() | nil,
           url: String.t()
@@ -29,7 +32,10 @@ defmodule Gleanex.Client.CalendarEvent do
     :generatedAttachments,
     :hasTranscript,
     :id,
+    :isOrganizer,
     :location,
+    :roomBookingStatus,
+    :roomName,
     :time,
     :transcriptUrl,
     :url
@@ -50,7 +56,10 @@ defmodule Gleanex.Client.CalendarEvent do
       generatedAttachments: [{Gleanex.Client.GeneratedAttachment, :t}],
       hasTranscript: :boolean,
       id: :string,
+      isOrganizer: :boolean,
       location: :string,
+      roomBookingStatus: {:enum, ["NONE", "ACCEPTED", "DECLINED", "PENDING"]},
+      roomName: :string,
       time: {Gleanex.Client.TimeInterval, :t},
       transcriptUrl: :string,
       url: :string

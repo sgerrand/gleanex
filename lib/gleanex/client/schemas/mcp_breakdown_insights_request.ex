@@ -4,6 +4,7 @@ defmodule Gleanex.Client.McpBreakdownInsightsRequest do
   """
 
   @type t :: %__MODULE__{
+          authMethods: [String.t()] | nil,
           breakdownType: String.t() | nil,
           dayRange: Gleanex.Client.Period.t() | nil,
           departments: [String.t()] | nil,
@@ -15,6 +16,7 @@ defmodule Gleanex.Client.McpBreakdownInsightsRequest do
         }
 
   defstruct [
+    :authMethods,
     :breakdownType,
     :dayRange,
     :departments,
@@ -31,7 +33,8 @@ defmodule Gleanex.Client.McpBreakdownInsightsRequest do
 
   def __fields__(:t) do
     [
-      breakdownType: {:enum, ["USERS", "HOST_APPLICATIONS", "TOOLS", "SERVERS"]},
+      authMethods: [:string],
+      breakdownType: {:enum, ["USERS", "HOST_APPLICATIONS", "TOOLS", "SERVERS", "AUTH_METHODS"]},
       dayRange: {Gleanex.Client.Period, :t},
       departments: [:string],
       hostApplications: [:string],

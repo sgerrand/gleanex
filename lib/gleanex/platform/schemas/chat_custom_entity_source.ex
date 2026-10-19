@@ -24,7 +24,7 @@ defmodule Gleanex.Platform.ChatCustomEntitySource do
       entity_id: :string,
       name: :string,
       title: :string,
-      type: {:const, "custom_entity"},
+      type: {:const, "CUSTOM_ENTITY"},
       url: :string
     ]
   end

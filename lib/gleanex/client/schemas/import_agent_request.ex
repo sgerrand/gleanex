@@ -9,10 +9,21 @@ defmodule Gleanex.Client.ImportAgentRequest do
           gitAuthorId: String.t() | nil,
           gitCommitSha: String.t() | nil,
           isDraft: boolean | nil,
-          syncMode: String.t() | nil
+          publishedBaselineHash: String.t() | nil,
+          syncMode: String.t() | nil,
+          versionSource: String.t() | nil
         }
 
-  defstruct [:bundle, :commitMessage, :gitAuthorId, :gitCommitSha, :isDraft, :syncMode]
+  defstruct [
+    :bundle,
+    :commitMessage,
+    :gitAuthorId,
+    :gitCommitSha,
+    :isDraft,
+    :publishedBaselineHash,
+    :syncMode,
+    :versionSource
+  ]
 
   @doc false
   @spec __fields__(atom) :: keyword
@@ -25,7 +36,9 @@ defmodule Gleanex.Client.ImportAgentRequest do
       gitAuthorId: :string,
       gitCommitSha: :string,
       isDraft: :boolean,
-      syncMode: {:enum, ["STAGED", "PUBLISHED"]}
+      publishedBaselineHash: :string,
+      syncMode: {:enum, ["STAGED", "PUBLISHED"]},
+      versionSource: {:enum, ["GIT", "USER"]}
     ]
   end
 end

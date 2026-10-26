@@ -7,10 +7,10 @@ defmodule Gleanex.Platform.SkillsListResponse do
           has_more: boolean,
           next_cursor: String.t() | nil,
           request_id: String.t(),
-          skills: [Gleanex.Platform.Skill.t()]
+          results: [Gleanex.Platform.Skill.t()]
         }
 
-  defstruct [:has_more, :next_cursor, :request_id, :skills]
+  defstruct [:has_more, :next_cursor, :request_id, :results]
 
   @doc false
   @spec __fields__(atom) :: keyword
@@ -19,9 +19,9 @@ defmodule Gleanex.Platform.SkillsListResponse do
   def __fields__(:t) do
     [
       has_more: :boolean,
-      next_cursor: :string,
+      next_cursor: {:union, [:string, :null]},
       request_id: :string,
-      skills: [{Gleanex.Platform.Skill, :t}]
+      results: [{Gleanex.Platform.Skill, :t}]
     ]
   end
 end

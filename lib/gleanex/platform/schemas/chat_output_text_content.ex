@@ -5,11 +5,12 @@ defmodule Gleanex.Platform.ChatOutputTextContent do
 
   @type t :: %__MODULE__{
           annotations: [Gleanex.Platform.ChatCitationAnnotation.t()] | nil,
+          structured_output: map | nil,
           text: String.t(),
           type: String.t()
         }
 
-  defstruct [:annotations, :text, :type]
+  defstruct [:annotations, :structured_output, :text, :type]
 
   @doc false
   @spec __fields__(atom) :: keyword
@@ -18,8 +19,9 @@ defmodule Gleanex.Platform.ChatOutputTextContent do
   def __fields__(:t) do
     [
       annotations: [{Gleanex.Platform.ChatCitationAnnotation, :t}],
+      structured_output: {:union, [:map, :null]},
       text: :string,
-      type: {:const, "output_text"}
+      type: {:const, "OUTPUT_TEXT"}
     ]
   end
 end

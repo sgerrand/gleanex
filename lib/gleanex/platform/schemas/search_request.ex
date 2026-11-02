@@ -20,7 +20,7 @@ defmodule Gleanex.Platform.SearchRequest do
 
   def __fields__(:t) do
     [
-      cursor: :string,
+      cursor: {:union, [:string, :null]},
       datasources: [:string],
       filters: [{Gleanex.Platform.Filter, :t}],
       page_size: :integer,

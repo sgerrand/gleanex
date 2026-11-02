@@ -17,6 +17,6 @@ defmodule Gleanex.Platform.ChatPersonSource do
   def __fields__(type \\ :t)
 
   def __fields__(:t) do
-    [name: :string, person_id: :string, type: {:const, "person"}, url: :string]
+    [name: :string, person_id: :string, type: {:const, "PERSON"}, url: :string]
   end
 end

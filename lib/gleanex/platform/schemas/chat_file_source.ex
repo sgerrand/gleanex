@@ -18,6 +18,6 @@ defmodule Gleanex.Platform.ChatFileSource do
   def __fields__(type \\ :t)
 
   def __fields__(:t) do
-    [datasource: :string, file_id: :string, title: :string, type: {:const, "file"}, url: :string]
+    [datasource: :string, file_id: :string, title: :string, type: {:const, "FILE"}, url: :string]
   end
 end

@@ -1,4 +1,4 @@
-defmodule Gleanex.Platform.ChatCitationSnippet do
+defmodule Gleanex.Client.ChatCitationSnippet do
   @moduledoc """
   Provides struct and type for a ChatCitationSnippet
   """

@@ -20,7 +20,7 @@ defmodule Gleanex.Admin.DlpExportFindingsRequest do
 
   def __fields__(:t) do
     [
-      exportType: {:enum, ["FINDINGS", "DOCUMENTS", "ISSUES"]},
+      exportType: {:enum, ["FINDINGS", "DOCUMENTS", "ISSUES", "FINDINGS_CSV"]},
       fieldScope: {:enum, ["ALL", "EXCLUDE_SENSITIVE", "CUSTOM"]},
       fieldsToExclude: [:string],
       fileName: :string,

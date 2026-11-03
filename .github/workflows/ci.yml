@@ -115,7 +115,7 @@ jobs:
       # needs neither the BEAM nor the dependency cache. Rules and exclusions
       # live in mado.toml, which the action's default `check .` picks up, so a
       # local `mado check` behaves the same as CI.
-      - uses: akiomik/mado@6642676268ddaad6187482ef57d95e218c6b865c # v0.3.2
+      - uses: akiomik/mado@176308a272e4057641ae1732e7b87c243b0c7829 # v0.4.0
 
   docs:
     name: Docs

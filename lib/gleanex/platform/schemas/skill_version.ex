@@ -11,6 +11,7 @@ defmodule Gleanex.Platform.SkillVersion do
           skill_id: String.t(),
           source_provenance: Gleanex.Platform.SkillSourceProvenance.t() | nil,
           updated_at: DateTime.t(),
+          updated_by: Gleanex.Platform.PersonReference.t() | nil,
           version: integer
         }
 
@@ -22,6 +23,7 @@ defmodule Gleanex.Platform.SkillVersion do
     :skill_id,
     :source_provenance,
     :updated_at,
+    :updated_by,
     :version
   ]
 
@@ -38,6 +40,7 @@ defmodule Gleanex.Platform.SkillVersion do
       skill_id: :string,
       source_provenance: {Gleanex.Platform.SkillSourceProvenance, :t},
       updated_at: {:string, "date-time"},
+      updated_by: {Gleanex.Platform.PersonReference, :t},
       version: :integer
     ]
   end

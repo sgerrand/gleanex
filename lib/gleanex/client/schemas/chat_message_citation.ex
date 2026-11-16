@@ -9,6 +9,7 @@ defmodule Gleanex.Client.ChatMessageCitation do
           sourceDocument: Gleanex.Client.Document.t() | nil,
           sourceFile: Gleanex.Client.ChatFile.t() | nil,
           sourcePerson: Gleanex.Client.Person.t() | nil,
+          sourceSkill: Gleanex.Client.ChatSkill.t() | nil,
           trackingToken: String.t() | nil
         }
 
@@ -18,6 +19,7 @@ defmodule Gleanex.Client.ChatMessageCitation do
     :sourceDocument,
     :sourceFile,
     :sourcePerson,
+    :sourceSkill,
     :trackingToken
   ]
 
@@ -32,6 +34,7 @@ defmodule Gleanex.Client.ChatMessageCitation do
       sourceDocument: {Gleanex.Client.Document, :t},
       sourceFile: {Gleanex.Client.ChatFile, :t},
       sourcePerson: {Gleanex.Client.Person, :t},
+      sourceSkill: {Gleanex.Client.ChatSkill, :t},
       trackingToken: :string
     ]
   end

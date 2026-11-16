@@ -6,6 +6,46 @@ defmodule Gleanex.Platform.Search do
   @default_client Gleanex.HTTP
 
   @doc """
+  Enumerate matching documents
+
+  Walk every indexed document that matches a selection and that the caller is permitted to see. Returns document references with minimal metadata and never bodies; request `SNIPPETS` via `include` for query-relevant excerpts, and hydrate full documents with `POST /api/documents/batch`. Unlike `POST /api/search`, `query` is optional: omit it to enumerate by `datasources`, `filters`, and `time_range` alone. Results are ordered for completeness, not relevance.
+  Follow `next_cursor` until `has_more` is `false`, regardless of page size. This is a live scan, not a snapshot: concurrent index changes can cause duplicates or omissions. Deduplicate by `document_id`.
+  A page is either complete at its cursor position or an error. A shard or datasource failure returns HTTP 503 and the same cursor stays valid for retry; this endpoint never returns a partial page. A cursor reused with a different selection returns HTTP 400 `invalid_cursor`.
+
+  ## Request Body
+
+  **Content Types**: `application/json`
+  """
+  @spec enumeration(body :: Gleanex.Platform.SearchEnumerationRequest.t(), opts :: keyword) ::
+          {:ok, Gleanex.Platform.SearchEnumerationResponse.t()} | {:error, Gleanex.Error.t()}
+  def enumeration(body, opts \\ []) do
+    client = opts[:client] || @default_client
+
+    client.request(%{
+      args: [body: body],
+      call: {Gleanex.Platform.Search, :enumeration},
+      url: "/search/enumeration",
+      body: body,
+      method: :post,
+      request: [{"application/json", {Gleanex.Platform.SearchEnumerationRequest, :t}}],
+      response: [
+        {200, {Gleanex.Platform.SearchEnumerationResponse, :t}},
+        {400, {Gleanex.Platform.ProblemDetail, :t}},
+        {401, {Gleanex.Platform.ProblemDetail, :t}},
+        {403, {Gleanex.Platform.ProblemDetail, :t}},
+        {404, {Gleanex.Platform.ProblemDetail, :t}},
+        {408, {Gleanex.Platform.ProblemDetail, :t}},
+        {413, {Gleanex.Platform.ProblemDetail, :t}},
+        {422, {Gleanex.Platform.ProblemDetail, :t}},
+        {429, {Gleanex.Platform.ProblemDetail, :t}},
+        {500, {Gleanex.Platform.ProblemDetail, :t}},
+        {503, {Gleanex.Platform.ProblemDetail, :t}}
+      ],
+      opts: opts
+    })
+  end
+
+  @doc """
   List search filters
 
   List datasources and common built-in filter fields visible to the authenticated user. This is a best-effort catalog, not an exhaustive list of every filter search accepts.

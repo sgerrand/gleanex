@@ -25,10 +25,11 @@ jobs:
       matrix:
         # One row per Elixir minor the package supports, each on the newest OTP
         # that minor builds against. The floor is the `elixir:` requirement in
-        # mix.exs; the top row is what .tool-versions pins and therefore what
-        # every other job here runs, so bumping .tool-versions means bumping it
-        # here too. Versions are spelled out because setup-beam reads a single
-        # pair from .tool-versions and a matrix needs several.
+        # mix.exs; the row marked `pinned` is what .tool-versions pins and
+        # therefore what every other job here runs, so bumping .tool-versions
+        # means bumping it here too. That row checks the two still match.
+        # Versions are spelled out because setup-beam reads a single pair from
+        # .tool-versions and a matrix needs several.
         include:
           - elixir: "1.18.4"
             otp: "27.3.4.16"
@@ -36,9 +37,12 @@ jobs:
             otp: "28.5.0.5"
           - elixir: "1.20.2"
             otp: "29.0.4"
+            pinned: true
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
         id: beam
@@ -46,6 +50,23 @@ jobs:
           elixir-version: ${{ matrix.elixir }}
           otp-version: ${{ matrix.otp }}
           version-type: strict
+
+      # Without this, a .tool-versions bump that misses the matrix leaves lint,
+      # docs and dialyzer running on a version no test job covers, and nothing
+      # says so. .tool-versions spells Elixir as `1.20.2-otp-29`, so only the
+      # part before `-otp-` is compared.
+      - name: Check the pinned row matches .tool-versions
+        if: matrix.pinned
+        env:
+          MATRIX_ELIXIR: ${{ matrix.elixir }}
+          MATRIX_OTP: ${{ matrix.otp }}
+        run: |
+          elixir=$(awk '$1 == "elixir" { sub(/-otp-.*/, "", $2); print $2 }' .tool-versions)
+          erlang=$(awk '$1 == "erlang" { print $2 }' .tool-versions)
+          if [ "$elixir" != "$MATRIX_ELIXIR" ] || [ "$erlang" != "$MATRIX_OTP" ]; then
+            echo "::error file=.tool-versions::.tool-versions pins Elixir $elixir / OTP $erlang, but the pinned matrix row is Elixir $MATRIX_ELIXIR / OTP $MATRIX_OTP. Update both together."
+            exit 1
+          fi
 
       - name: Restore dependencies and build
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -71,6 +92,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
         id: beam
@@ -110,6 +133,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       # Kept out of the lint job above: mado is a standalone binary, so this
       # needs neither the BEAM nor the dependency cache. Rules and exclusions
@@ -123,6 +148,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
         id: beam
@@ -155,6 +182,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
         id: beam
@@ -199,6 +228,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
         id: beam

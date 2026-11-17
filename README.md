@@ -19,7 +19,7 @@ end
 
 <!-- x-release-please-end -->
 
-Needs Elixir 1.18 or later.
+Needs Elixir 1.18 or later. Tested on OTP 27, 28 and 29.
 
 ## Use it
 

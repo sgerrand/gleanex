@@ -34,7 +34,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # The token is not left in .git/config: this job has write access, and
+      # dependency code runs during mix deps.get and compile. The push step
+      # below passes it to git for that one command instead.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
         id: beam
@@ -114,6 +119,8 @@ jobs:
 
       - name: Push the branch
         if: steps.client.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -126,7 +133,14 @@ jobs:
           # Plain --force: this branch belongs to the workflow, and
           # --force-with-lease has no baseline to compare against after a fresh
           # checkout that never fetched it.
-          git push --force origin "$BRANCH"
+          #
+          # The header is the same one actions/checkout would have saved, so
+          # GitHub sees the same credentials. It is set for this command only.
+          # Masked too: the log masks the token itself but not its base64 form.
+          auth=$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)
+          echo "::add-mask::$auth"
+          git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $auth" \
+            push --force origin "$BRANCH"
 
       - name: Open or update the pull request
         if: steps.client.outputs.changed == 'true'

@@ -63,10 +63,15 @@ jobs:
       # The token is only for resolving the ref through GitHub's API. Without
       # one that call is limited to 60 an hour per IP address, which hosted
       # runners share, so it answers 403 rather than a commit.
+      #
+      # The ref goes through env rather than straight into the script. Actions
+      # pastes expressions into the script before bash runs it, so a ref with a
+      # quote in it would end the string and run the rest as a command.
       - name: Download the latest descriptions
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: mix glean.specs --force --ref "${{ inputs.ref || 'main' }}"
+          REF: ${{ inputs.ref || 'main' }}
+        run: mix glean.specs --force --ref "$REF"
 
       - name: Has anything changed?
         id: changed

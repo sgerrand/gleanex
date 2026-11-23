@@ -39,7 +39,7 @@ defmodule Gleanex.Admin.ExportInfo do
       endTime: {:string, "iso-date-time"},
       exportId: :string,
       exportSize: {:integer, "int64"},
-      exportType: {:enum, ["FINDINGS", "DOCUMENTS", "ISSUES"]},
+      exportType: {:enum, ["FINDINGS", "DOCUMENTS", "ISSUES", "FINDINGS_CSV"]},
       fileName: :string,
       filter: {Gleanex.Admin.DlpFindingFilter, :t},
       issueFilter: {Gleanex.Admin.DlpIssueFilter, :t},

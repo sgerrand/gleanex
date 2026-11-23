@@ -27,6 +27,7 @@ defmodule Gleanex.Client.InsightsOverviewResponse do
           searchSessionSatisfaction: number | nil,
           searchWeeklyActiveUserTimeseries: Gleanex.Client.LabeledCountInfo.t() | nil,
           searchesTimeseries: Gleanex.Client.LabeledCountInfo.t() | nil,
+          totalSignupsWeekAgo: integer | nil,
           weeklyActiveUserTimeseries: Gleanex.Client.LabeledCountInfo.t() | nil
         }
 
@@ -54,6 +55,7 @@ defmodule Gleanex.Client.InsightsOverviewResponse do
     :searchSessionSatisfaction,
     :searchWeeklyActiveUserTimeseries,
     :searchesTimeseries,
+    :totalSignupsWeekAgo,
     :weeklyActiveUserTimeseries
   ]
 
@@ -86,6 +88,7 @@ defmodule Gleanex.Client.InsightsOverviewResponse do
       searchSessionSatisfaction: {:number, "float"},
       searchWeeklyActiveUserTimeseries: {Gleanex.Client.LabeledCountInfo, :t},
       searchesTimeseries: {Gleanex.Client.LabeledCountInfo, :t},
+      totalSignupsWeekAgo: :integer,
       weeklyActiveUserTimeseries: {Gleanex.Client.LabeledCountInfo, :t}
     ]
   end

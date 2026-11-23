@@ -50,7 +50,8 @@ defmodule Gleanex.Indexing.ObjectDefinition do
            "CALENDAR",
            "AGENTS",
            "AI_CONVERSATION",
-           "AI_ARTIFACT"
+           "AI_ARTIFACT",
+           "UGC_SKILL"
          ]},
       name: :string,
       propertyDefinitions: [{Gleanex.Indexing.PropertyDefinition, :t}],

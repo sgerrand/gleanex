@@ -8,7 +8,7 @@ defmodule Gleanex.Platform.Skills do
   @doc """
   Create skill
 
-  Create a skill from an uploaded SKILL.md, .zip, or .skill bundle. If the authenticated user already has a skill with the same name, the existing skill is superseded with a new version.
+  Create a skill from an uploaded SKILL.md, .zip, or .skill bundle. If the authenticated user already has a skill with the same name, the existing skill is superseded with a new version, unless it is source-managed: a same-name create over a GitHub-imported skill returns 409, and the caller syncs the existing skill instead. Two concurrent same-name creates can still produce two skills.
 
   ## Request Body
 
@@ -27,12 +27,13 @@ defmodule Gleanex.Platform.Skills do
       method: :post,
       request: [{"multipart/form-data", {Gleanex.Platform.SkillCreateRequest, :t}}],
       response: [
-        {200, {Gleanex.Platform.SkillCreateResponse, :t}},
+        {201, {Gleanex.Platform.SkillCreateResponse, :t}},
         {400, {Gleanex.Platform.ProblemDetail, :t}},
         {401, {Gleanex.Platform.ProblemDetail, :t}},
         {403, {Gleanex.Platform.ProblemDetail, :t}},
         {404, {Gleanex.Platform.ProblemDetail, :t}},
         {408, {Gleanex.Platform.ProblemDetail, :t}},
+        {409, {Gleanex.Platform.ProblemDetail, :t}},
         {413, {Gleanex.Platform.ProblemDetail, :t}},
         {429, {Gleanex.Platform.ProblemDetail, :t}},
         {500, {Gleanex.Platform.ProblemDetail, :t}},
@@ -45,7 +46,7 @@ defmodule Gleanex.Platform.Skills do
   @doc """
   Create skill version
 
-  Create a new immutable version for an existing caller-managed skill from an uploaded SKILL.md, .zip, or .skill bundle.
+  Create a new immutable version for an existing caller-managed skill from an uploaded SKILL.md, .zip, or .skill bundle. A create-version over a GitHub-imported skill returns 409, and the caller syncs the existing skill instead.
 
   ## Request Body
 
@@ -67,7 +68,7 @@ defmodule Gleanex.Platform.Skills do
       method: :post,
       request: [{"multipart/form-data", {Gleanex.Platform.SkillVersionCreateRequest, :t}}],
       response: [
-        {200, {Gleanex.Platform.SkillVersionCreateResponse, :t}},
+        {201, {Gleanex.Platform.SkillVersionCreateResponse, :t}},
         {400, {Gleanex.Platform.ProblemDetail, :t}},
         {401, {Gleanex.Platform.ProblemDetail, :t}},
         {403, {Gleanex.Platform.ProblemDetail, :t}},
@@ -75,6 +76,36 @@ defmodule Gleanex.Platform.Skills do
         {408, {Gleanex.Platform.ProblemDetail, :t}},
         {409, {Gleanex.Platform.ProblemDetail, :t}},
         {413, {Gleanex.Platform.ProblemDetail, :t}},
+        {429, {Gleanex.Platform.ProblemDetail, :t}},
+        {500, {Gleanex.Platform.ProblemDetail, :t}},
+        {503, {Gleanex.Platform.ProblemDetail, :t}}
+      ],
+      opts: opts
+    })
+  end
+
+  @doc """
+  Delete skill
+
+  Delete a skill the authenticated caller is allowed to manage. This operation permanently removes all versions of the skill.
+
+  """
+  @spec delete(skill_id :: String.t(), opts :: keyword) :: :ok | {:error, Gleanex.Error.t()}
+  def delete(skill_id, opts \\ []) do
+    client = opts[:client] || @default_client
+
+    client.request(%{
+      args: [skill_id: skill_id],
+      call: {Gleanex.Platform.Skills, :delete},
+      url: "/skills/#{skill_id}",
+      method: :delete,
+      response: [
+        {204, :null},
+        {400, {Gleanex.Platform.ProblemDetail, :t}},
+        {401, {Gleanex.Platform.ProblemDetail, :t}},
+        {403, {Gleanex.Platform.ProblemDetail, :t}},
+        {404, {Gleanex.Platform.ProblemDetail, :t}},
+        {408, {Gleanex.Platform.ProblemDetail, :t}},
         {429, {Gleanex.Platform.ProblemDetail, :t}},
         {500, {Gleanex.Platform.ProblemDetail, :t}},
         {503, {Gleanex.Platform.ProblemDetail, :t}}
@@ -208,13 +239,51 @@ defmodule Gleanex.Platform.Skills do
   end
 
   @doc """
+  Import skills from GitHub
+
+  Import one or more skills selected from a GitHub source preview. Each source URL is fetched and persisted as an independent skill with source provenance. This operation does not create a durable source resource. The import is atomic: if any source cannot be fetched, validated, or persisted, no skills are created.
+
+  ## Request Body
+
+  **Content Types**: `application/json`
+  """
+  @spec import(body :: Gleanex.Platform.SkillImportRequest.t(), opts :: keyword) ::
+          {:ok, Gleanex.Platform.SkillImportResponse.t()} | {:error, Gleanex.Error.t()}
+  def import body, opts \\ [] do
+    client = opts[:client] || @default_client
+
+    client.request(%{
+      args: [body: body],
+      call: {Gleanex.Platform.Skills, :import},
+      url: "/skills/import",
+      body: body,
+      method: :post,
+      request: [{"application/json", {Gleanex.Platform.SkillImportRequest, :t}}],
+      response: [
+        {201, {Gleanex.Platform.SkillImportResponse, :t}},
+        {400, {Gleanex.Platform.ProblemDetail, :t}},
+        {401, {Gleanex.Platform.ProblemDetail, :t}},
+        {403, {Gleanex.Platform.ProblemDetail, :t}},
+        {408, {Gleanex.Platform.ProblemDetail, :t}},
+        {409, {Gleanex.Platform.ProblemDetail, :t}},
+        {413, {Gleanex.Platform.ProblemDetail, :t}},
+        {422, {Gleanex.Platform.UnauthorizedAgentToolsProblem, :t}},
+        {429, {Gleanex.Platform.ProblemDetail, :t}},
+        {500, {Gleanex.Platform.ProblemDetail, :t}},
+        {503, {Gleanex.Platform.ProblemDetail, :t}}
+      ],
+      opts: opts
+    })
+  end
+
+  @doc """
   List skills
 
-  List skills available to the authenticated user.
+  List every custom skill the authenticated caller can access. Built-in skills are excluded: they have no versions, content download, update, or delete, so their identifiers would fail most skill operations. Chat-authored skills shared with the caller without a listed grant are omitted: they stay retrievable by identifier when it is known, but this list does not discover them.
 
   ## Options
 
-    * `page_size`: Maximum number of skills to return.
+    * `page_size`: Maximum number of skills to return. Defaults to 20. Maximum is 100.
     * `cursor`: Opaque pagination cursor from a previous response.
 
   """
@@ -252,7 +321,7 @@ defmodule Gleanex.Platform.Skills do
 
   ## Options
 
-    * `page_size`: Maximum number of versions to return.
+    * `page_size`: Maximum number of versions to return. Defaults to 20. Maximum is 100.
     * `cursor`: Opaque pagination cursor from a previous response.
 
   """
@@ -293,7 +362,13 @@ defmodule Gleanex.Platform.Skills do
   **Content Types**: `application/json`
   """
   @spec preview_source(body :: Gleanex.Platform.SkillSourcePreviewRequest.t(), opts :: keyword) ::
-          {:ok, Gleanex.Platform.SkillSourcePreviewResponse.t() | String.t()}
+          {:ok,
+           Gleanex.Platform.SkillSourcePreviewResponse.t()
+           | Gleanex.Platform.SkillSourcePreviewStreamError.t()
+           | Gleanex.Platform.SkillSourcePreviewStreamProgress.t()
+           | Gleanex.Platform.SkillSourcePreviewStreamResult.t()
+           | Gleanex.Platform.SkillSourcePreviewStreamScan.t()
+           | Gleanex.Platform.SkillSourcePreviewStreamSkill.t()}
           | {:error, Gleanex.Error.t()}
   def preview_source(body, opts \\ []) do
     client = opts[:client] || @default_client
@@ -306,12 +381,55 @@ defmodule Gleanex.Platform.Skills do
       method: :post,
       request: [{"application/json", {Gleanex.Platform.SkillSourcePreviewRequest, :t}}],
       response: [
-        {200, {:union, [:string, {Gleanex.Platform.SkillSourcePreviewResponse, :t}]}},
+        {200,
+         {:union,
+          [
+            {Gleanex.Platform.SkillSourcePreviewResponse, :t},
+            {Gleanex.Platform.SkillSourcePreviewStreamError, :t},
+            {Gleanex.Platform.SkillSourcePreviewStreamProgress, :t},
+            {Gleanex.Platform.SkillSourcePreviewStreamResult, :t},
+            {Gleanex.Platform.SkillSourcePreviewStreamScan, :t},
+            {Gleanex.Platform.SkillSourcePreviewStreamSkill, :t}
+          ]}},
         {400, {Gleanex.Platform.ProblemDetail, :t}},
         {401, {Gleanex.Platform.ProblemDetail, :t}},
         {403, {Gleanex.Platform.ProblemDetail, :t}},
         {408, {Gleanex.Platform.ProblemDetail, :t}},
         {413, {Gleanex.Platform.ProblemDetail, :t}},
+        {422, {Gleanex.Platform.UnauthorizedAgentToolsProblem, :t}},
+        {429, {Gleanex.Platform.ProblemDetail, :t}},
+        {500, {Gleanex.Platform.ProblemDetail, :t}},
+        {503, {Gleanex.Platform.ProblemDetail, :t}}
+      ],
+      opts: opts
+    })
+  end
+
+  @doc """
+  Sync a GitHub-imported skill
+
+  Refresh one GitHub-imported skill from its stored source URL. If the skill content has changed, this operation creates a new skill version. If the skill is no longer present upstream, the stored skill is left unchanged and must be deleted explicitly.
+
+  """
+  @spec sync(skill_id :: String.t(), opts :: keyword) ::
+          {:ok, Gleanex.Platform.SkillSyncResponse.t()} | {:error, Gleanex.Error.t()}
+  def sync(skill_id, opts \\ []) do
+    client = opts[:client] || @default_client
+
+    client.request(%{
+      args: [skill_id: skill_id],
+      call: {Gleanex.Platform.Skills, :sync},
+      url: "/skills/#{skill_id}/sync",
+      method: :post,
+      response: [
+        {200, {Gleanex.Platform.SkillSyncResponse, :t}},
+        {400, {Gleanex.Platform.ProblemDetail, :t}},
+        {401, {Gleanex.Platform.ProblemDetail, :t}},
+        {403, {Gleanex.Platform.ProblemDetail, :t}},
+        {404, {Gleanex.Platform.ProblemDetail, :t}},
+        {408, {Gleanex.Platform.ProblemDetail, :t}},
+        {409, {Gleanex.Platform.ProblemDetail, :t}},
+        {422, {Gleanex.Platform.UnauthorizedAgentToolsProblem, :t}},
         {429, {Gleanex.Platform.ProblemDetail, :t}},
         {500, {Gleanex.Platform.ProblemDetail, :t}},
         {503, {Gleanex.Platform.ProblemDetail, :t}}
@@ -323,7 +441,7 @@ defmodule Gleanex.Platform.Skills do
   @doc """
   Update skill
 
-  Update mutable metadata for a skill. V1 supports enabling or disabling a skill without changing its content.
+  Enable or disable the skill for the authenticated caller without changing its content. The owner's update sets the skill's stored status. Any other caller's update applies only to that caller.
 
   ## Request Body
 

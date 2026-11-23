@@ -142,7 +142,7 @@ defmodule Gleanex.Indexing.People do
   @doc """
   Bulk index employees
 
-  Bulk upload details of all the employees. This deletes all employees uploaded in the prior batch. SOON TO BE DEPRECATED in favor of /bulkindexemployees.
+  Bulk upload details of all the employees. This deletes all employees uploaded in the prior batch. Deprecated. Use /indexemployee to add or update each employee, and /deleteemployee to remove employees who are no longer present. Unlike this endpoint, /indexemployee does not delete employees left out of a request.
 
   ## Request Body
 

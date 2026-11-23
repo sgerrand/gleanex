@@ -41,9 +41,9 @@ defmodule Gleanex.Indexing.Troubleshooting do
   end
 
   @doc """
-  Beta: Get document information
+  Get document information
 
-  Gives various information that would help in debugging related to a particular document. Currently in beta, might undergo breaking changes without prior notice.
+  Gives various information that would help in debugging related to a particular document.
 
   Tip: Refer to the [Troubleshooting tutorial](https://developers.glean.com/indexing/debugging/datasource-config) for more information.
 
@@ -72,9 +72,9 @@ defmodule Gleanex.Indexing.Troubleshooting do
   end
 
   @doc """
-  Beta: Get document lifecycle events
+  Get document lifecycle events
 
-  Retrieves lifecycle events for a specific document including upload time, index times and deletions. Rate limited to 1 request per minute per datasource. Currently in beta, might undergo breaking changes without prior notice.
+  Retrieves lifecycle events for a specific document including upload time, index times and deletions. Rate limited to 1 request per minute per datasource.
 
   ## Request Body
 
@@ -107,9 +107,9 @@ defmodule Gleanex.Indexing.Troubleshooting do
   end
 
   @doc """
-  Beta: Get information of a batch of documents
+  Get information of a batch of documents
 
-  Gives various information that would help in debugging related to a batch of documents. Currently in beta, might undergo breaking changes without prior notice.
+  Gives various information that would help in debugging related to a batch of documents.
 
   Tip: Refer to the [Troubleshooting tutorial](https://developers.glean.com/indexing/debugging/datasource-config) for more information.
 
@@ -138,9 +138,9 @@ defmodule Gleanex.Indexing.Troubleshooting do
   end
 
   @doc """
-  Beta: Get datasource status
+  Get datasource status
 
-  Gather information about the datasource's overall status. Currently in beta, might undergo breaking changes without prior notice.
+  Gather information about the datasource's overall status.
 
   Tip: Refer to the [Troubleshooting tutorial](https://developers.glean.com/indexing/debugging/datasource-config) for more information.
 
@@ -165,9 +165,9 @@ defmodule Gleanex.Indexing.Troubleshooting do
   end
 
   @doc """
-  Beta: Get user information
+  Get user information
 
-  Gives various information that would help in debugging related to a particular user. Currently in beta, might undergo breaking changes without prior notice.
+  Gives various information that would help in debugging related to a particular user.
 
   Tip: Refer to the [Troubleshooting tutorial](https://developers.glean.com/indexing/debugging/datasource-config) for more information.
 

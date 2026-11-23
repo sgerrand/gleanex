@@ -178,7 +178,7 @@ defmodule Gleanex.Client.Chat do
   @doc """
   Retrieves a Chat
 
-  Retrieves the chat history between Glean Assistant and the user for a given Chat.
+  Retrieves the chat history between Glean Assistant and the user for a given Chat. Omit pagination fields to return the full message history (existing behavior). Use last alone for the latest page, last with before for older messages, or first with after for newer messages. Each page is chronological and includes pagination cursors and page flags.
 
   ## Options
 
@@ -372,6 +372,7 @@ defmodule Gleanex.Client.Chat do
           id: String.t() | nil,
           name: String.t() | nil,
           permissions: Gleanex.Client.ObjectPermissions.t() | nil,
+          status: String.t() | nil,
           updateTime: integer | nil
         }
 
@@ -384,6 +385,7 @@ defmodule Gleanex.Client.Chat do
     :id,
     :name,
     :permissions,
+    :status,
     :updateTime
   ]
 
@@ -401,6 +403,7 @@ defmodule Gleanex.Client.Chat do
       id: :string,
       name: :string,
       permissions: {Gleanex.Client.ObjectPermissions, :t},
+      status: {:enum, ["SUCCESS", "ERROR", "IN_PROGRESS", "CANCELLED"]},
       updateTime: :integer
     ]
   end

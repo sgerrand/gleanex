@@ -7,10 +7,10 @@ defmodule Gleanex.Platform.SkillVersionsListResponse do
           has_more: boolean,
           next_cursor: String.t() | nil,
           request_id: String.t(),
-          versions: [Gleanex.Platform.SkillVersion.t()]
+          results: [Gleanex.Platform.SkillVersion.t()]
         }
 
-  defstruct [:has_more, :next_cursor, :request_id, :versions]
+  defstruct [:has_more, :next_cursor, :request_id, :results]
 
   @doc false
   @spec __fields__(atom) :: keyword
@@ -19,9 +19,9 @@ defmodule Gleanex.Platform.SkillVersionsListResponse do
   def __fields__(:t) do
     [
       has_more: :boolean,
-      next_cursor: :string,
+      next_cursor: {:union, [:string, :null]},
       request_id: :string,
-      versions: [{Gleanex.Platform.SkillVersion, :t}]
+      results: [{Gleanex.Platform.SkillVersion, :t}]
     ]
   end
 end

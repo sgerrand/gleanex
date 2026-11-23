@@ -5,6 +5,7 @@ defmodule Gleanex.Client.PeopleRequest do
 
   @type t :: %__MODULE__{
           emailIds: [String.t()] | nil,
+          fallbackToAuthenticatedIdentity: boolean | nil,
           includeFields: [String.t()] | nil,
           includeTypes: [String.t()] | nil,
           obfuscatedIds: [String.t()] | nil,
@@ -12,7 +13,15 @@ defmodule Gleanex.Client.PeopleRequest do
           timezoneOffset: integer | nil
         }
 
-  defstruct [:emailIds, :includeFields, :includeTypes, :obfuscatedIds, :source, :timezoneOffset]
+  defstruct [
+    :emailIds,
+    :fallbackToAuthenticatedIdentity,
+    :includeFields,
+    :includeTypes,
+    :obfuscatedIds,
+    :source,
+    :timezoneOffset
+  ]
 
   @doc false
   @spec __fields__(atom) :: keyword
@@ -21,6 +30,7 @@ defmodule Gleanex.Client.PeopleRequest do
   def __fields__(:t) do
     [
       emailIds: [:string],
+      fallbackToAuthenticatedIdentity: :boolean,
       includeFields: [
         enum: [
           "BADGES",

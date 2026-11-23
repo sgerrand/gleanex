@@ -11,6 +11,7 @@ defmodule Gleanex.Client.ChatMetadata do
           icon: Gleanex.Client.IconConfig.t() | nil,
           id: String.t() | nil,
           name: String.t() | nil,
+          status: String.t() | nil,
           updateTime: integer | nil
         }
 
@@ -22,6 +23,7 @@ defmodule Gleanex.Client.ChatMetadata do
     :icon,
     :id,
     :name,
+    :status,
     :updateTime
   ]
 
@@ -38,6 +40,7 @@ defmodule Gleanex.Client.ChatMetadata do
       icon: {Gleanex.Client.IconConfig, :t},
       id: :string,
       name: :string,
+      status: {:enum, ["SUCCESS", "ERROR", "IN_PROGRESS", "CANCELLED"]},
       updateTime: :integer
     ]
   end
